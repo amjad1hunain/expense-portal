@@ -245,6 +245,7 @@ input[type=file]{display:none}
       </select>
       <input type="text" id="f-q" oninput="renderDash()" placeholder="Search..." style="width:180px;font-size:11px;padding:5px 8px">
       <button class="btn btn-d btn-xs" onclick="if(confirm('Clear all?')){TXN=[];nid=1;refresh()}">Clear All</button>
+      <button class="btn btn-xs" onclick="showDeleteByCard()" style="background:rgba(255,96,136,.12);border:1px solid rgba(255,96,136,.35);color:#ff8888;font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer">🗑 Delete by Card</button>
     </div>
     <div id="dash-table"><div class="empty">No transactions yet.</div></div>
   </div>
@@ -699,6 +700,17 @@ input[type=file]{display:none}
       <textarea id="pm-notes" rows="2" placeholder="Any additional notes..."></textarea>
     </div>
 
+    <div style="display:flex;gap:20px;margin:10px 0;padding:10px;background:var(--s2);border-radius:8px;border:1px solid var(--b1)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600">
+        <input type="radio" name="pm-transfer" id="pm-transfer-done" value="done" checked style="accent-color:var(--ok)">
+        <span style="color:var(--ok)">✓ Transfer Done</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600">
+        <input type="radio" name="pm-transfer" id="pm-transfer-pending" value="pending" style="accent-color:var(--warn)">
+        <span style="color:var(--warn)">⏳ Transfer Not Done Yet</span>
+      </label>
+    </div>
+
     <div class="brow" style="margin-top:16px;justify-content:flex-end">
       <button class="btn btn-s btn-xs" onclick="cm()">Cancel</button>
       <button class="btn btn-p" onclick="savePayment()">Record Payment</button>
@@ -934,7 +946,7 @@ var PAYMENTS = window.PAYMENTS = []; // {id, cardId, stmtMonth, amount, totalAmo
 var DUE_DATES = window.DUE_DATES = {}; // { "cardId|stmtMonth": "YYYY-MM-DD" } — due date per parent card per statement month
 var bid = window.bid = 1; // bank id counter
 var pyid = window.pyid = 1; // payment id counter
-var CUR = window.CUR = {symbol:'PKR', name:'PKR', decimals:2};
+var CUR = window.CUR = {symbol:'$', name:'USD', decimals:2};
 let ADMIN_MODE = false; // Set to true only when admin logs in
 const ADMIN_PASSWORD = 'admin123'; // Change this to your desired password
 
@@ -1621,7 +1633,7 @@ function applyCardMatch(){
     const dateRaw=_detectedDateCol>=0?String(row[_detectedDateCol]||'').trim():'';
     const desc=_detectedDescCol>=0?String(row[_detectedDescCol]||'').trim():'';
     const rawAmt=_detectedAmtCol>=0?String(row[_detectedAmtCol]||'').replace(/[^0-9.\-]/g,''):'0';
-    const amt=Math.abs(parseFloat(rawAmt)||0);
+    const amt=parseFloat(rawAmt)||0;
 
     // Read month from file column if detected, else fallback
     let stmtLabel=fallbackLabel;
@@ -1716,7 +1728,7 @@ function doMap(){
     const desc=mI>=0?String(row[mI]||'').trim():'';
     const rawAmt=aI>=0?String(row[aI]||'').replace(/[^0-9.\-]/g,''):'0';
     const card=cI>=0?String(row[cI]||'').slice(-4):'';
-    const amt=Math.abs(parseFloat(rawAmt)||0);
+    const amt=parseFloat(rawAmt)||0;
     if((date||desc)&&amt>0)rows.push({date:normDate(date)||date,desc:desc.substring(0,80),amount:amt,card});
   });
   if(!rows.length){showUpWarn('No valid rows found. Check column mapping.','al-w');return;}
@@ -2890,8 +2902,15 @@ function getDueDateForMonth(card, stmtMonth){
   return DUE_DATES[card.id+'|'+stmtMonth]||null;
 }
 
-function getDueStatus(dueDateStr){
+function getDueStatus(dueDateStr, paymentDate){
   if(!dueDateStr) return {label:'No Due Date',cls:'',urgent:false};
+  // If paid, show star if on time
+  if(paymentDate){
+    const due=new Date(dueDateStr); due.setHours(0,0,0,0);
+    const paid=new Date(paymentDate); paid.setHours(0,0,0,0);
+    if(paid<=due) return {label:'★ Paid on Time',cls:'paid-ontime',urgent:false,paidOnTime:true};
+    else return {label:'Paid Late',cls:'paid-late',urgent:false};
+  }
   const today=new Date(); today.setHours(0,0,0,0);
   const due=new Date(dueDateStr); due.setHours(0,0,0,0);
   const wdays=workingDaysUntil(due);
@@ -2953,7 +2972,7 @@ function renderPayment(){
 
     const bank=BANKS.find(b=>b.id===p.bankId);
     const dueDateStr=getDueDateForMonth(p,stmtMonth);
-    const dueStatus=getDueStatus(dueDateStr);
+    const dueStatus=getDueStatus(dueDateStr, payment?.date);
 
     // Urgent styling
     const urgentBorder=(!isPaid&&dueStatus.urgent)?'border-color:var(--acc3);box-shadow:0 0 0 1px var(--acc3)':'';
@@ -3031,6 +3050,7 @@ function renderPayment(){
             <span style="color:var(--ok);font-size:14px">✓</span>
             <span style="font-size:12px;font-weight:600;color:var(--ok)">PAID</span>
             <span style="font-size:11px;font-family:var(--mono);color:var(--t2)">${payment.date} · ${fmt(payment.amount)}</span>
+            ${payment.transferStatus==='pending'?`<span style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(255,184,64,.15);color:var(--warn)">⏳ TRANSFER PENDING</span>`:`<span style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(96,200,255,.12);color:#60c8ff">✓ TRANSFERRED</span>`}
             ${payment.amount!==total?`<span style="font-size:10px;font-family:var(--mono);color:var(--warn)">Δ ${fmt(payment.amount-total)}</span>`:''}
           </div>
           <div style="font-size:10px;color:var(--t2);font-family:var(--mono)">
@@ -3122,6 +3142,7 @@ function savePayment(){
   const diff=Math.abs(amt-_pmTotal);
   if(diff>0.01&&!diffReason) return alert('Please provide a reason for the difference between total and payment amount.');
 
+  const transferStatus = document.querySelector('input[name="pm-transfer"]:checked')?.value || 'done';
   PAYMENTS.push({
     id:pyid++,
     cardId:_pmCardId,
@@ -3130,12 +3151,14 @@ function savePayment(){
     totalAmount:_pmTotal,
     diffReason:diffReason||'',
     date,bankId,ref,notes,
+    transferStatus,
     paidAt:new Date().toISOString()
   });
 
   cm();
   renderPayment();
-  ok('Payment Recorded!','****'+(CARDS.find(c=>c.id===_pmCardId)?.num||'')+' · '+_pmMonth+' · '+fmt(amt));
+  const tStatus = transferStatus === 'done' ? '✓ Transfer Done' : '⏳ Transfer Pending';
+  ok('Payment Recorded!','****'+(CARDS.find(c=>c.id===_pmCardId)?.num||'')+' · '+_pmMonth+' · '+fmt(amt)+' · '+tStatus);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3367,6 +3390,93 @@ function addAllUnmatched(){
   } else {
     alert('All cards are already matched or no unmatched cards found.');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DELETE TRANSACTIONS BY PARENT CARD + MONTH
+// ══════════════════════════════════════════════════════════════════════
+function showDeleteByCard(){
+  // Get unique parent cards that have transactions
+  const parents = CARDS.filter(c=>!c.parentId);
+  const months = [...new Set(TXN.map(t=>t.stmtMonth))].sort().reverse();
+  
+  let opts = parents.map(p=>`<option value="${p.id}">****${p.num} — ${p.name||'—'} (${p.dept||''})</option>`).join('');
+  let monthOpts = `<option value="">-- All Months --</option>` + months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  
+  const div = document.createElement('div');
+  div.id = 'del-card-modal';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  div.innerHTML = `
+    <div style="background:var(--bg);border:1px solid var(--b1);border-radius:12px;padding:24px;width:92%;max-width:460px;font-family:var(--mono)">
+      <div style="font-size:15px;font-weight:700;color:var(--acc3);margin-bottom:4px">🗑 Delete Transactions by Card</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:16px">Select parent card and optionally a month to delete all its transactions</div>
+      
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:5px">Parent Card</label>
+        <select id="del-card-sel" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--t1);font-family:var(--mono);font-size:12px">
+          ${opts}
+        </select>
+      </div>
+      
+      <div style="margin-bottom:16px">
+        <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:5px">Statement Month (optional — leave blank to delete ALL months)</label>
+        <select id="del-month-sel" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--t1);font-family:var(--mono);font-size:12px">
+          ${monthOpts}
+        </select>
+      </div>
+      
+      <div id="del-preview" style="font-size:11px;color:var(--warn);margin-bottom:14px;padding:8px;background:rgba(255,184,64,.07);border-radius:6px;display:none"></div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="document.getElementById('del-card-modal').remove()" style="padding:7px 16px;border-radius:7px;border:1px solid var(--b1);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--mono);font-size:12px">Cancel</button>
+        <button onclick="previewDelByCard()" style="padding:7px 16px;border-radius:7px;border:1px solid rgba(255,184,64,.4);background:rgba(255,184,64,.1);color:var(--warn);cursor:pointer;font-family:var(--mono);font-size:12px">Preview</button>
+        <button onclick="confirmDelByCard()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--acc3);color:#fff;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600">Delete</button>
+      </div>
+    </div>`;
+  document.body.appendChild(div);
+}
+
+function previewDelByCard(){
+  const cardId = parseInt(document.getElementById('del-card-sel').value);
+  const month = document.getElementById('del-month-sel').value;
+  const card = CARDS.find(c=>c.id===cardId);
+  const children = CARDS.filter(c=>c.parentId===cardId);
+  const allIds = [cardId, ...children.map(c=>c.id)];
+  
+  let txns = TXN.filter(t=>allIds.includes(t.cardId));
+  if(month) txns = txns.filter(t=>t.stmtMonth===month);
+  
+  const prev = document.getElementById('del-preview');
+  prev.style.display = 'block';
+  prev.innerHTML = `⚠ Will delete <strong style="color:var(--acc3)">${txns.length} transactions</strong> for <strong>${card?.name||'—'}</strong>${month?' in '+month:' (ALL months)'} including ${children.length} child card(s)`;
+}
+
+function confirmDelByCard(){
+  const cardId = parseInt(document.getElementById('del-card-sel').value);
+  const month = document.getElementById('del-month-sel').value;
+  const card = CARDS.find(c=>c.id===cardId);
+  const children = CARDS.filter(c=>c.parentId===cardId);
+  const allIds = [cardId, ...children.map(c=>c.id)];
+  
+  let toDelete = TXN.filter(t=>allIds.includes(t.cardId));
+  if(month) toDelete = toDelete.filter(t=>t.stmtMonth===month);
+  
+  if(!toDelete.length){ alert('No transactions found for this selection.'); return; }
+  
+  const msg = month 
+    ? `Delete ${toDelete.length} transactions for ${card?.name} in ${month}?`
+    : `Delete ALL ${toDelete.length} transactions for ${card?.name} across all months?`;
+  
+  if(!confirm(msg)) return;
+  
+  const delIds = new Set(toDelete.map(t=>t.id));
+  TXN = TXN.filter(t=>!delIds.has(t.id));
+  window.TXN = TXN;
+  
+  document.getElementById('del-card-modal').remove();
+  refresh();
+  if(typeof window._fbScheduleSave==='function') window._fbScheduleSave();
+  ok('Deleted!', toDelete.length+' transactions removed');
 }
 
 // Override refresh to also update manual card select + trigger Firebase save
