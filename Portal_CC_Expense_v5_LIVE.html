@@ -3496,12 +3496,14 @@ refresh=function(){
               if(data.PDFkw) window.PDFkw=data.PDFkw;
             } catch(parseErr){ console.error('[Firebase] Data parse error:',parseErr); }
             dbStatus('Data loaded ✓','ok');
-            console.log('[Firebase] Loaded:',window.TXN.length,'txns,',window.CARDS.length,'cards');
+            console.log('[Firebase] Loaded:',(window.TXN||[]).length,'txns,',(window.CARDS||[]).length,'cards');
           } else {
             dbStatus('No data yet — Fresh start','warn');
             console.log('[Firebase] Empty database');
           }
           _fbLoaded = true;
+          // Log current state to debug
+          console.log('[Firebase] State after load - CARDS:', window.CARDS, 'TXN:', window.TXN);
           if(typeof refresh==='function') refresh();
           if(typeof renderCardTree==='function') renderCardTree();
           if(typeof populateCardSelects==='function') populateCardSelects();
