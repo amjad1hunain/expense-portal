@@ -3483,16 +3483,18 @@ refresh=function(){
         window._fbDB.ref(WS+'/state').once('value').then(function(snap){
           if(snap.exists()){
             var data = snap.val();
-            if(data.CARDS && Array.isArray(data.CARDS)){ window.CARDS=data.CARDS; window.cid=Math.max.apply(null,data.CARDS.map(function(c){return c.id;}).concat([0]))+1; }
-            if(data.TXN && Array.isArray(data.TXN)){ window.TXN=data.TXN; }
-            if(data.BANKS && Array.isArray(data.BANKS)){ window.BANKS=data.BANKS; window.bid=Math.max.apply(null,data.BANKS.map(function(b){return b.id;}).concat([0]))+1; }
-            if(data.PAYMENTS && Array.isArray(data.PAYMENTS)){ window.PAYMENTS=data.PAYMENTS; window.pyid=Math.max.apply(null,data.PAYMENTS.map(function(p){return p.id;}).concat([0]))+1; }
-            if(data.COA && Array.isArray(data.COA)) window.COA=data.COA;
-            if(data.AX && Array.isArray(data.AX)) window.AX=data.AX;
-            if(data.DUE_DATES) window.DUE_DATES=data.DUE_DATES;
-            if(data.CUR) window.CUR=data.CUR;
-            if(data.selectedFields) window.selectedFields=data.selectedFields;
-            if(data.PDFkw) window.PDFkw=data.PDFkw;
+            try {
+              if(data.CARDS && Array.isArray(data.CARDS)){ window.CARDS=data.CARDS; window.cid=(data.CARDS.length?Math.max.apply(null,data.CARDS.map(function(c){return c.id||0;}))+1:1); }
+              if(data.TXN && Array.isArray(data.TXN)){ window.TXN=data.TXN; window.nid=(data.TXN.length?data.TXN.length+1:1); }
+              if(data.BANKS && Array.isArray(data.BANKS)){ window.BANKS=data.BANKS; window.bid=(data.BANKS.length?Math.max.apply(null,data.BANKS.map(function(b){return b.id||0;}))+1:1); }
+              if(data.PAYMENTS && Array.isArray(data.PAYMENTS)){ window.PAYMENTS=data.PAYMENTS; window.pyid=(data.PAYMENTS.length?Math.max.apply(null,data.PAYMENTS.map(function(p){return p.id||0;}))+1:1); }
+              if(data.COA && Array.isArray(data.COA)) window.COA=data.COA;
+              if(data.AX && Array.isArray(data.AX)) window.AX=data.AX;
+              if(data.DUE_DATES) window.DUE_DATES=data.DUE_DATES;
+              if(data.CUR) window.CUR=data.CUR;
+              if(data.selectedFields && Array.isArray(data.selectedFields)) window.selectedFields=data.selectedFields;
+              if(data.PDFkw) window.PDFkw=data.PDFkw;
+            } catch(parseErr){ console.error('[Firebase] Data parse error:',parseErr); }
             dbStatus('Data loaded ✓','ok');
             console.log('[Firebase] Loaded:',window.TXN.length,'txns,',window.CARDS.length,'cards');
           } else {
