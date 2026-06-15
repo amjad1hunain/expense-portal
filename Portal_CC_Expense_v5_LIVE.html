@@ -1,0 +1,3667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Portal v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+:root{
+  --bg:#0d0d12; --s1:#13131a; --s2:#1a1a24; --s3:#22222e;
+  --b1:#2e2e3d; --b2:#3d3d52; --b3:#52526a;
+  --t1:#eeeef8; --t2:#9898b8; --t3:#5a5a78;
+  --acc:#a8ff60; --acc2:#60a8ff; --acc3:#ff6088;
+  --ok:#50e8a0; --warn:#ffb840; --info:#50c8ff;
+  --r:8px; --mono:'IBM Plex Mono',monospace; --sans:'Plus Jakarta Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;gap:0;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--b2);position:sticky;top:0;z-index:200;height:50px}
+.logo{font-family:var(--mono);font-size:11px;color:var(--acc);letter-spacing:.1em;margin-right:20px;white-space:nowrap}
+.ntabs{display:flex;gap:1px;height:100%}
+.ntab{padding:0 16px;height:100%;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--t2);transition:all .15s;font-family:var(--sans);border-bottom:2px solid transparent;letter-spacing:.03em}
+.ntab:hover{color:var(--t1)}
+.ntab.on{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* VIEWS */
+.view{display:none;padding:20px;max-width:1280px;margin:0 auto}
+.view.on{display:block}
+
+/* PAGE HEAD */
+.ph{font-size:20px;font-weight:700;margin-bottom:4px;color:var(--t1)}
+.ps{font-size:11px;color:var(--t2);margin-bottom:18px;font-family:var(--mono)}
+
+/* STATS */
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.stat{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);padding:14px 18px;min-width:130px;flex:1}
+.sv{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--t1)}
+.sl{font-size:10px;color:var(--t2);margin-top:2px;font-family:var(--mono)}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b2);border-radius:var(--r);padding:18px;margin-bottom:14px}
+
+/* SECTION LABEL */
+.sl2{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--t2);text-transform:uppercase;margin-bottom:10px;font-family:var(--mono)}
+
+/* FORM */
+label{font-size:11px;color:var(--t2);display:block;margin-bottom:5px;font-family:var(--mono);letter-spacing:.02em}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:7px;
+  padding:8px 10px;color:var(--t1);font-size:12px;font-family:var(--mono);outline:none;transition:border .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+input[type=date]{color-scheme:dark}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.7) sepia(1) hue-rotate(180deg);cursor:pointer;opacity:0.8}
+input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+select option{background:var(--s2)}
+.fg{margin-bottom:10px}
+.fr{display:grid;gap:10px;margin-bottom:10px}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:1fr 1fr 1fr}
+.c4{grid-template-columns:1fr 1fr 1fr 1fr}
+.c5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
+
+/* BUTTONS */
+.btn{padding:7px 16px;border-radius:7px;font-size:11px;font-weight:600;letter-spacing:.04em;cursor:pointer;border:none;transition:all .15s;font-family:var(--sans);white-space:nowrap}
+.btn-p{background:var(--acc);color:#0a0a0d}
+.btn-p:hover{opacity:.85}
+.btn-s{background:var(--s2);color:var(--t1);border:1px solid var(--b1)}
+.btn-s:hover{border-color:var(--acc);color:var(--acc)}
+.btn-d{background:transparent;color:var(--acc3);border:1px solid var(--acc3)}
+.btn-d:hover{background:var(--acc3);color:#fff}
+.btn-info{background:rgba(96,168,255,.12);color:var(--acc2);border:1px solid rgba(96,168,255,.3)}
+.btn-xs{padding:4px 10px;font-size:10px}
+.brow{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+
+/* BADGES */
+.bdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;letter-spacing:.04em;font-family:var(--mono)}
+.bdg-p{background:rgba(96,168,255,.15);color:var(--acc2)}
+.bdg-s{background:rgba(255,144,80,.15);color:#ffa060}
+.bdg-ok{background:rgba(96,255,176,.15);color:var(--ok)}
+.bdg-w{background:rgba(255,192,80,.15);color:var(--warn)}
+.bdg-parent{background:rgba(168,255,96,.15);color:var(--acc)}
+.bdg-child{background:rgba(255,96,136,.15);color:var(--acc3)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono)}
+.tbl th{text-align:left;padding:7px 9px;color:var(--t2);font-weight:600;border-bottom:1px solid var(--b2);font-size:10px;letter-spacing:.07em;white-space:nowrap;position:sticky;top:0;background:var(--s2);z-index:2}
+.tbl td{padding:8px 9px;border-bottom:1px solid rgba(40,40,47,.8);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(255,255,255,.03)}
+.tbl-w{overflow-x:auto;max-height:70vh;overflow-y:auto;border-radius:var(--r);border:1px solid var(--b1)}
+.amt{color:var(--acc);font-weight:500}
+
+/* CHECKBOX */
+.cbrow{display:flex;gap:12px;flex-wrap:wrap}
+.cbi{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--t2);font-family:var(--mono)}
+.cbi input[type=checkbox]{width:13px;height:13px;accent-color:var(--acc);cursor:pointer}
+.cbi:hover{color:var(--t1)}
+
+/* UPLOAD DROP ZONE */
+.dz{border:1.5px dashed var(--b2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s}
+.dz:hover,.dz.drag{border-color:var(--acc);background:rgba(168,255,96,.03)}
+.dz-icon{font-size:24px;margin-bottom:6px}
+.dz-t{font-size:13px;font-weight:600;margin-bottom:3px}
+.dz-s{font-size:10px;color:var(--t3);font-family:var(--mono)}
+input[type=file]{display:none}
+
+/* CARD GROUP (for grouped transactions) */
+.card-group{margin-bottom:12px;border:1px solid var(--b1);border-radius:var(--r);overflow:hidden}
+.cg-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--s3);cursor:pointer;user-select:none;border-bottom:1px solid var(--b2)}
+.cg-title{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.cg-meta{font-size:10px;color:var(--t2);font-family:var(--mono)}
+.cg-body{display:none;padding:0}
+.cg-body.open{display:block}
+
+/* REVIEW ROW (serial style) */
+.rrow{display:grid;gap:0;border-bottom:1px solid var(--b1)}
+.rrow:last-child{border-bottom:none}
+.rrow-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s1)}
+.rrow-serial{font-family:var(--mono);font-size:10px;color:var(--t3);min-width:28px}
+.rrow-info{flex:1}
+.rrow-merchant{font-size:13px;font-weight:600;color:var(--t1)}
+.rrow-meta{font-size:10px;color:var(--t2);font-family:var(--mono);margin-top:1px}
+.rrow-amt{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--acc);white-space:nowrap}
+.rrow-expand{cursor:pointer;color:var(--t3);font-size:11px;padding:2px 6px;border-radius:4px;transition:all .15s;font-family:var(--mono);border:1px solid transparent}
+.rrow-expand:hover{border-color:var(--b2);color:var(--t1)}
+.rrow-fields{display:none;padding:12px 14px 14px 52px;background:var(--s2);border-top:1px solid var(--b1)}
+.rrow-fields.open{display:block}
+.rrow-done .rrow-top{background:rgba(96,255,176,.04)}
+
+/* OWN TOGGLE */
+.own-row{display:flex;gap:5px;margin-bottom:10px}
+.own-btn{flex:1;padding:6px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--b1);background:transparent;color:var(--t2);transition:all .15s;text-align:center;font-family:var(--sans)}
+.own-mine{border-color:var(--ok);background:rgba(96,255,176,.1);color:var(--ok)}
+.own-not{border-color:var(--t3);background:rgba(68,68,79,.2);color:var(--t3)}
+
+/* FIELD SELECTOR */
+.fsel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:12px}
+.fsel-item{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--mono);color:var(--t2);transition:all .15s}
+.fsel-item:hover{border-color:var(--b2);color:var(--t1)}
+.fsel-item.on{border-color:var(--acc);color:var(--acc);background:rgba(168,255,96,.07)}
+.fsel-item input[type=checkbox]{accent-color:var(--acc);width:12px;height:12px}
+
+/* MODAL */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:center;justify-content:center}
+.moverlay.on{display:flex}
+.modal{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:24px;width:92%;max-width:620px;max-height:88vh;overflow-y:auto}
+.modal-t{font-size:14px;font-weight:700;margin-bottom:3px}
+.modal-s{font-size:11px;color:var(--t2);margin-bottom:16px;font-family:var(--mono)}
+
+/* PROGRESS */
+.prog-w{background:var(--bg);border-radius:20px;height:4px;overflow:hidden;margin-top:5px}
+.prog-b{height:100%;border-radius:20px;background:var(--acc);transition:width .4s}
+
+/* INNER TABS */
+.itabs{display:flex;gap:3px;margin-bottom:16px;border-bottom:1px solid var(--b1)}
+.itab{padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--t2);font-family:var(--sans);border-bottom:2px solid transparent;margin-bottom:-1px}
+.itab.on{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* ALERT */
+.alert{padding:10px 14px;border-radius:7px;font-size:12px;margin-bottom:12px;font-family:var(--mono);line-height:1.5}
+.al-i{background:rgba(96,200,255,.07);border:1px solid rgba(96,200,255,.2);color:var(--info)}
+.al-ok{background:rgba(96,255,176,.07);border:1px solid rgba(96,255,176,.2);color:var(--ok)}
+.al-w{background:rgba(255,192,80,.07);border:1px solid rgba(255,192,80,.2);color:var(--warn)}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px;color:var(--t3);font-family:var(--mono);font-size:11px}
+
+/* CARD TREE */
+.card-tree-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;margin-bottom:4px;font-size:12px}
+.card-tree-parent{background:rgba(168,255,96,.07);border:1px solid rgba(168,255,96,.2)}
+.card-tree-child{background:var(--s2);border:1px solid var(--b1);margin-left:20px}
+.tree-line{color:var(--t3);font-family:var(--mono);font-size:10px}
+
+/* PARSE PREVIEW */
+.prow{display:grid;grid-template-columns:20px 1fr 1fr 120px 80px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(40,40,47,.6);font-family:var(--mono);font-size:11px}
+.prow:last-child{border-bottom:none}
+.prow:hover{background:rgba(255,255,255,.01)}
+.ph2{background:var(--s2);font-size:10px;color:var(--t3);font-weight:500}
+
+@media(max-width:640px){
+  .stats{flex-direction:column}
+  .c3,.c4,.c5{grid-template-columns:1fr 1fr}
+  .c2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">EXPENSE v3</div>
+  <div class="ntabs">
+    <button class="ntab on" onclick="gv('admin',this)">Dashboard</button>
+    <button class="ntab" onclick="gv('cards',this)">Cards</button>
+    <button class="ntab" onclick="gv('upload',this)">Upload</button>
+    <button class="ntab" onclick="gv('review',this)">Review</button>
+    <button class="ntab" onclick="gv('report',this)">Report</button>
+    <button class="ntab" onclick="gv('payment',this)">Payment</button>
+    <button class="ntab" onclick="gv('settings',this)">Settings</button>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+    <span id="admin-badge" style="display:none;font-size:9px;font-family:var(--mono);color:var(--ok);background:rgba(96,255,176,.12);border:1px solid rgba(96,255,176,.3);padding:2px 8px;border-radius:10px">ADMIN MODE</span>
+    <button class="btn btn-xs" id="admin-btn" onclick="toggleAdminMode()" style="font-size:10px;background:var(--s2);color:var(--t2);border:1px solid var(--b1);padding:4px 10px">Admin Login</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+<div id="v-admin" class="view on">
+  <div class="ph">Dashboard</div>
+  <div class="ps">Monthly expense overview</div>
+  <div class="stats">
+    <div class="stat"><div class="sv" id="st-total">0</div><div class="sl">Transactions</div></div>
+    <div class="stat"><div class="sv" id="st-amt">0</div><div class="sl">Total </div></div>
+    <div class="stat"><div class="sv" id="st-rev">0</div><div class="sl">Reviewed</div></div>
+    <div class="stat"><div class="sv" id="st-pend">0</div><div class="sl">Pending</div></div>
+    <div class="stat"><div class="sv" id="st-ax">0</div><div class="sl">AX Posted</div></div>
+    <div class="stat"><div class="sv" id="st-cards">0</div><div class="sl">Active Cards</div></div>
+  </div>
+
+  <!-- Per-card progress -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600">Card-wise Progress</div>
+      <button class="btn btn-s btn-xs" onclick="openLinksModal()">Generate Review Links</button>
+    </div>
+    <div id="card-progress"></div>
+  </div>
+
+  <!-- Quick admin table -->
+  <div class="card">
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <select id="f-type" onchange="renderDash()" style="width:140px;font-size:11px;padding:5px 8px">
+        <option value="">All Types</option>
+        <option value="personal">Personal</option>
+        <option value="shared">Shared</option>
+      </select>
+      <select id="f-status" onchange="renderDash()" style="width:130px;font-size:11px;padding:5px 8px">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="reviewed">Reviewed</option>
+      </select>
+      <input type="text" id="f-q" oninput="renderDash()" placeholder="Search..." style="width:180px;font-size:11px;padding:5px 8px">
+      <button class="btn btn-d btn-xs" onclick="if(confirm('Clear all?')){TXN=[];nid=1;refresh()}">Clear All</button>
+    </div>
+    <div id="dash-table"><div class="empty">No transactions yet.</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ CARDS ═══════════════════ -->
+<div id="v-cards" class="view">
+  <div class="ph">Card Management</div>
+  <div class="ps">Manage parent cards and cardholders — add manually or bulk upload via Excel/CSV</div>
+
+  <!-- Inner Tabs -->
+  <div class="itabs">
+    <button class="itab on" onclick="cardTab('manual',this)">Manual Add</button>
+    <button class="itab" onclick="cardTab('bulk',this)">Bulk Upload (Excel/CSV)</button>
+  </div>
+
+  <!-- MANUAL TAB -->
+  <div id="ctab-manual">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <!-- Add Parent Card -->
+      <div class="card">
+        <div class="sl2">Add New Parent Card</div>
+        <div class="fg"><label>Card Number (last 4 or full)</label><input type="text" id="pc-num" placeholder="e.g. 21009"></div>
+        <div class="fg"><label>Card Name / Label</label><input type="text" id="pc-name" placeholder="e.g. AMEX YM"></div>
+        <div class="fg"><label>Department</label><input type="text" id="pc-dept" placeholder="e.g. Operations"></div>
+        <div class="fg"><label>Bank Account</label>
+          <select id="pc-bank"><option value="">-- Select Bank Account --</option></select>
+        </div>
+        <button class="btn btn-p btn-xs" onclick="addParentCard()">Add Parent Card</button>
+      </div>
+
+      <!-- Add Child Card (Cardholder) -->
+      <div class="card">
+        <div class="sl2">Add Child Card / Cardholder</div>
+        <div class="fg"><label>Select Parent Card</label>
+          <select id="cc-parent" onchange="fillChildDept()">
+            <option value="">-- Parent Card Select --</option>
+          </select>
+        </div>
+        <div class="fg"><label>Child Card Number (last 4 or full)</label><input type="text" id="cc-num" placeholder="e.g. 25000"></div>
+        <div class="fg"><label>Employee / Cardholder Name</label><input type="text" id="cc-emp" placeholder="Yousuf Meghani"></div>
+        <div class="fg"><label>Department (auto-fill from parent)</label><input type="text" id="cc-dept" placeholder="Operations"></div>
+        <button class="btn btn-p btn-xs" onclick="addChildCard()">Add Child Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BULK UPLOAD TAB -->
+  <div id="ctab-bulk" style="display:none">
+    <div class="card">
+      <div class="sl2" style="margin-bottom:6px">Upload Cards via Excel / CSV</div>
+      <div class="alert al-i" style="margin-bottom:12px">
+        Required columns: <strong>Parent Card Number</strong>, <strong>Parent Card Name</strong>, <strong>Department</strong> (optional),
+        <strong>Child Card Number</strong> (optional), <strong>Employee Name</strong> (optional).
+        Duplicate cards will be skipped. <a onclick="downloadCardTemplate()" style="color:var(--acc);cursor:pointer;text-decoration:underline">Download Template ↓</a>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="dz" id="card-dz" onclick="document.getElementById('fi-cards').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleCardDrop(event)">
+        <div class="dz-icon">📋</div>
+        <div class="dz-t">Drop Excel or CSV here</div>
+        <div class="dz-s">Supported: .xlsx, .xls, .csv</div>
+      </div>
+      <input type="file" id="fi-cards" accept=".xlsx,.xls,.csv" onchange="handleCardFile(this.files[0])">
+
+      <!-- Column Mapper -->
+      <div id="card-map-sec" style="display:none;margin-top:14px">
+        <div class="sl2">Column Mapping</div>
+        <div class="alert al-i" id="card-file-info" style="margin-bottom:10px"></div>
+        <div class="fr c3" id="card-map-fields"></div>
+        <div class="brow">
+          <button class="btn btn-p btn-xs" onclick="previewCardUpload()">Preview</button>
+          <button class="btn btn-s btn-xs" onclick="resetCardUpload()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Preview Table -->
+      <div id="card-prev-sec" style="display:none;margin-top:14px">
+        <div class="sl2">Preview <span id="card-prev-cnt" style="color:var(--t2)"></span></div>
+        <div style="background:var(--bg);border:1px solid var(--b1);border-radius:8px;overflow:hidden;max-height:360px;overflow-y:auto;margin-bottom:10px">
+          <div id="card-prev-list"></div>
+        </div>
+        <div class="brow">
+          <button class="btn btn-p" onclick="importCardUpload()">Import Cards</button>
+          <button class="btn btn-s btn-xs" onclick="resetCardUpload()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Tree (always visible) -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="sl2" style="margin:0">Card Hierarchy</div>
+      <span style="font-size:10px;color:var(--t2);font-family:var(--mono)">Each child card = one cardholder</span>
+    </div>
+    <div id="card-tree"><div class="empty">No cards found. Add one above.</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ UPLOAD ═══════════════════ -->
+<div id="v-upload" class="view">
+  <div class="ph">Upload Statement</div>
+  <div class="ps">Upload PDF or Excel — transactions will be auto-parsed</div>
+
+  <div class="card">
+    <div class="dz" id="dz" onclick="document.getElementById('fi').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="dz-icon">⬆</div>
+      <div class="dz-t">Drop PDF, Excel or CSV here</div>
+      <div class="dz-s">Supported: .pdf, .xlsx, .xls, .csv</div>
+    </div>
+    <input type="file" id="fi" accept=".pdf,.xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+
+    <!-- Card assignment (mandatory before import) -->
+    <div id="up-card-sec" style="display:none;margin-top:14px">
+      <div class="sl2">Statement Details</div>
+
+      <!-- ROW 1: Parent Card + Child Card (conditional) + Month + Year + Due Date -->
+      <div class="fr c5" style="margin-bottom:10px">
+        <div class="fg">
+          <label>Parent Card</label>
+          <select id="up-parent-sel" onchange="onUpParentChange()">
+            <option value="">-- Select Parent Card --</option>
+          </select>
+        </div>
+        <div class="fg" id="up-child-wrap">
+          <label>Child Card <span style="color:var(--t3);font-size:9px;font-family:var(--mono)">(if applicable)</span></label>
+          <select id="up-child-sel" onchange="onUpChildChange()">
+            <option value="">-- No Child Card --</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Statement Month</label>
+          <select id="up-month">
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Statement Year</label>
+          <input type="number" id="up-year" placeholder="2025" min="2000" max="2099" value="2025">
+        </div>
+        <div class="fg">
+          <label>Payment Due Date <span style="color:var(--t3);font-size:9px;font-family:var(--mono)">(parent card only)</span></label>
+          <input type="date" id="up-due-date" style="cursor:pointer;min-width:160px">
+        </div>
+      </div>
+
+      <!-- ROW 2: Auto-filled info preview -->
+      <div id="up-card-info" style="display:none;padding:10px 14px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;margin-bottom:10px;font-family:var(--mono);font-size:11px">
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <div><span style="color:var(--t3)">Parent Card:</span> <span id="uci-parent" style="color:var(--acc)">—</span></div>
+          <div id="uci-child-wrap"><span style="color:var(--t3)">Child Card:</span> <span id="uci-child" style="color:var(--acc2)">—</span></div>
+          <div><span style="color:var(--t3)">Employee:</span> <span id="uci-emp" style="color:var(--t1)">—</span></div>
+          <div><span style="color:var(--t3)">Dept:</span> <span id="uci-dept" style="color:var(--t1)">—</span></div>
+          <div><span style="color:var(--t3)">Type:</span> <span id="uci-type" style="color:var(--warn)">—</span></div>
+        </div>
+      </div>
+
+      <!-- Hidden legacy fields (kept for confirmImport compatibility) -->
+      <input type="hidden" id="up-card-sel" value="">
+      <input type="hidden" id="up-card-manual" value="">
+      <input type="hidden" id="up-type" value="personal">
+      <input type="hidden" id="up-emp" value="">
+      <input type="hidden" id="up-dept" value="">
+    </div>
+
+    <!-- Column mapper -->
+    <div id="up-map-sec" style="display:none;margin-top:14px">
+      <div class="sl2">Map Columns</div>
+      <div class="alert al-i" id="up-file-info"></div>
+      <div class="fr c4" id="up-map-fields"></div>
+      <div class="brow">
+        <button class="btn btn-p btn-xs" onclick="doMap()">Preview</button>
+        <button class="btn btn-s btn-xs" onclick="resetUp()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Parsed preview -->
+    <div id="up-prev-sec" style="display:none;margin-top:14px">
+      <div class="sl2">Parsed Transactions <span id="up-cnt" style="color:var(--t2)"></span></div>
+      <div class="alert al-w" id="up-warn" style="display:none"></div>
+      <div style="background:var(--bg);border:1px solid var(--b1);border-radius:8px;overflow:hidden;max-height:320px;overflow-y:auto">
+        <div class="prow ph2">
+          <input type="checkbox" id="chk-all" style="width:12px;height:12px;accent-color:var(--acc)" onchange="toggleAll(this.checked)">
+          <div>Date &amp; Description</div><div>Description</div><div>Amount</div><div>Actions</div>
+        </div>
+        <div id="up-plist"></div>
+      </div>
+      <div class="brow" style="margin-top:10px">
+        <button class="btn btn-p" onclick="confirmImport()">Import Selected</button>
+        <button class="btn btn-s btn-xs" onclick="resetUp()">Reset</button>
+        <span id="sel-cnt" style="font-size:10px;color:var(--t2);font-family:var(--mono)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Self-Upload Section -->
+  <div class="card">
+    <div class="sl2" style="margin-bottom:8px">Employee Self-Upload</div>
+    <div class="alert al-i">Employee can upload their edited CSV/Excel and resubmit. First export the CSV from the admin report, edit the fields, then upload here.</div>
+    <div class="dz" style="padding:20px" onclick="document.getElementById('fi-emp').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleEmpDrop(event)">
+      <div class="dz-t" style="font-size:12px">Employee Review File Upload</div>
+      <div class="dz-s">Edited CSV/Excel previously exported from the admin report</div>
+    </div>
+    <input type="file" id="fi-emp" accept=".xlsx,.xls,.csv" onchange="handleEmpFile(this.files[0])">
+    <div id="emp-up-result" style="margin-top:10px"></div>
+  </div>
+
+  <!-- Manual Add -->
+  <div class="card">
+    <div class="sl2" style="margin-bottom:12px">Or Add Transaction Manually</div>
+    <div class="fr c4">
+      <div class="fg"><label>Date</label><input type="date" id="m-date"></div>
+      <div class="fg"><label>Statement Month</label>
+        <select id="m-month">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div class="fg"><label>Year</label><input type="number" id="m-year" placeholder="2025" min="2000" max="2099" value="2025"></div>
+      <div class="fg">
+        <label>Card</label>
+        <select id="m-card-sel" onchange="onMCardChange()">
+          <option value="">-- Select Card --</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr c4">
+      <div class="fg"><label>Description / Merchant</label><input type="text" id="m-desc" placeholder="e.g. Metro Cash &amp; Carry"></div>
+      <div class="fg"><label>Amount</label><input type="number" id="m-amt" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="fg" id="m-emp-wrap"><label>Employee</label><input type="text" id="m-emp" placeholder="Ali Hassan"></div>
+      <div class="fg" id="m-dept-wrap" style="display:none"><label>Department</label><input type="text" id="m-dept" placeholder="Operations"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-p btn-xs" onclick="manualAdd()">Add</button>
+      <button class="btn btn-info btn-xs" onclick="loadSample()">Load Sample Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ REVIEW ═══════════════════ -->
+<div id="v-review" class="view">
+  <div class="ph">Transaction Review</div>
+  <div class="ps">Transactions grouped by card — review serially</div>
+
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <select id="rv-month-filter" onchange="renderReview()" style="width:160px;font-size:11px;padding:5px 8px">
+      <option value="">All Months</option>
+    </select>
+    <select id="rv-card-filter" onchange="renderReview()" style="width:200px;font-size:11px;padding:5px 8px">
+      <option value="">All Cards</option>
+    </select>
+    <select id="rv-status-filter" onchange="renderReview()" style="width:130px;font-size:11px;padding:5px 8px">
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="reviewed">Reviewed</option>
+    </select>
+    <button class="btn btn-p btn-xs" onclick="expandAll()">Expand All</button>
+    <button class="btn btn-s btn-xs" onclick="collapseAll()">Collapse All</button>
+    <button class="btn btn-s btn-xs" onclick="saveAllReviews()">Save All Changes</button>
+  </div>
+
+  <div id="review-container"><div class="empty">No transactions found.</div></div>
+</div>
+
+<!-- ═══════════════════ REPORT ═══════════════════ -->
+<div id="v-report" class="view">
+  <div class="ph">Report</div>
+  <div class="ps">Filter transactions, choose fields, then export</div>
+
+  <div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="sv" id="r-t">0</div><div class="sl">Total (filtered)</div></div>
+    <div class="stat"><div class="sv" id="r-r">0</div><div class="sl">Reviewed</div></div>
+    <div class="stat"><div class="sv" id="r-p">0</div><div class="sl">Pending</div></div>
+    <div class="stat"><div class="sv" id="r-a">$ 0</div><div class="sl">Amount (filtered)</div></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="sl2" style="margin:0">Filters</div>
+      <button class="btn btn-s btn-xs" onclick="clearReportFilters()">Clear All Filters</button>
+    </div>
+    <div class="fr c4" style="margin-bottom:8px">
+      <div class="fg">
+        <label>Statement Month</label>
+        <select id="rf-month" onchange="renderReportTable()">
+          <option value="">All Months</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Card</label>
+        <select id="rf-card" onchange="renderReportTable()">
+          <option value="">All Cards</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Card Type</label>
+        <select id="rf-type" onchange="renderReportTable()">
+          <option value="">All Types</option>
+          <option value="personal">Personal</option>
+          <option value="shared">Shared</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Status</label>
+        <select id="rf-status" onchange="renderReportTable()">
+          <option value="">All</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Description (search)</label>
+        <input type="text" id="rf-desc" oninput="renderReportTable()" placeholder="e.g. Metro, Shell...">
+      </div>
+    </div>
+    <div class="fr c4">
+      <div class="fg">
+        <label>Employee / Dept</label>
+        <input type="text" id="rf-who" oninput="renderReportTable()" placeholder="Name or department...">
+      </div>
+      <div class="fg">
+        <label>COA</label>
+        <input type="text" id="rf-coa" oninput="renderReportTable()" placeholder="e.g. 5200 or Travel...">
+      </div>
+      <div class="fg">
+        <label>Amount Min</label>
+        <input type="number" id="rf-amt-min" oninput="renderReportTable()" placeholder="0" step="0.01" min="0">
+      </div>
+      <div class="fg">
+        <label>Amount Max</label>
+        <input type="number" id="rf-amt-max" oninput="renderReportTable()" placeholder="999999" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="fr c2">
+      <div class="fg">
+        <label>Date From</label>
+        <input type="date" id="rf-date-from" onchange="renderReportTable()">
+      </div>
+      <div class="fg">
+        <label>Date To</label>
+        <input type="date" id="rf-date-to" onchange="renderReportTable()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Selector -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="sl2" style="margin:0">Select Fields to Include</div>
+      <div class="brow">
+        <button class="btn btn-s btn-xs" onclick="selAllFields(true)">Select All</button>
+        <button class="btn btn-s btn-xs" onclick="selAllFields(false)">Clear All</button>
+      </div>
+    </div>
+    <div class="fsel-grid" id="field-selector"></div>
+    <div class="brow" style="margin-top:4px">
+      <button class="btn btn-p" onclick="renderReportTable()">Apply</button>
+      <button class="btn btn-p" onclick="exportCSV()">CSV Export</button>
+      <button class="btn btn-p" onclick="exportExcel()">Excel Export</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="report-tbl"><div class="empty">Select fields above and click Apply.</div></div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ PAYMENT ═══════════════════ -->
+<div id="v-payment" class="view">
+  <div class="ph">Payment Management</div>
+  <div class="ps">Parent card wise monthly payments — due dates, bank accounts, payment history</div>
+
+  <!-- Month filter -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:11px;font-weight:600">Statement Month:</div>
+      <select id="pay-month-filter" onchange="renderPayment()" style="font-size:11px;padding:5px 10px;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--mono)">
+        <option value="">-- Select Month --</option>
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <span id="pay-stat-paid" style="font-size:11px;font-family:var(--mono);color:var(--ok)"></span>
+        <span id="pay-stat-pending" style="font-size:11px;font-family:var(--mono);color:var(--warn)"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="payment-container"><div class="empty">Select a statement month to view payment details.</div></div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="moverlay" id="m-payment">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-t" id="pm-title">Record Payment</div>
+    <div class="modal-s" id="pm-sub"></div>
+
+    <div class="fr c2" style="margin-bottom:10px">
+      <div class="fg">
+        <label>Statement Total</label>
+        <input type="text" id="pm-total" readonly style="background:var(--s2);color:var(--acc);font-weight:700">
+      </div>
+      <div class="fg">
+        <label>Payment Amount</label>
+        <input type="number" id="pm-amount" placeholder="Enter amount" step="0.01" min="0" oninput="onPmAmountChange()">
+      </div>
+    </div>
+
+    <div class="fg" id="pm-diff-row" style="display:none">
+      <label style="color:var(--warn)">⚠ Difference Reason (Credit / Adjustment)</label>
+      <textarea id="pm-diff-reason" rows="2" placeholder="e.g. Credit note received from vendor, cash back credited..."></textarea>
+    </div>
+
+    <div class="fr c2">
+      <div class="fg">
+        <label>Payment Date</label>
+        <input type="date" id="pm-date">
+      </div>
+      <div class="fg">
+        <label>Bank Account</label>
+        <div id="pm-bank-display" style="padding:7px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;font-size:12px;font-family:var(--mono);color:var(--acc2)">—</div>
+        <input type="hidden" id="pm-bank">
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Payment Reference / Transaction ID</label>
+      <input type="text" id="pm-ref" placeholder="e.g. TRN-20250315-001">
+    </div>
+
+    <div class="fg">
+      <label>Notes (optional)</label>
+      <textarea id="pm-notes" rows="2" placeholder="Any additional notes..."></textarea>
+    </div>
+
+    <div class="brow" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn btn-s btn-xs" onclick="cm()">Cancel</button>
+      <button class="btn btn-p" onclick="savePayment()">Record Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT HISTORY MODAL -->
+<div class="moverlay" id="m-pay-history">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-t" id="ph-title">Payment History</div>
+    <div class="modal-s" id="ph-sub"></div>
+    <div id="ph-body"></div>
+    <div class="brow" style="margin-top:14px"><button class="btn btn-s btn-xs" onclick="cm()">Close</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SETTINGS ═══════════════════ -->
+<div id="v-settings" class="view">
+  <div class="ph">Settings</div>
+  <div class="ps">COA, AX Labels, Currency, PDF settings</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+    <!-- CURRENCY CARD (new) -->
+    <div class="card">
+      <div class="sl2" style="margin-bottom:10px">Currency Settings</div>
+      <div class="fr c2">
+        <div class="fg">
+          <label>Currency Symbol</label>
+          <input type="text" id="cur-symbol" value="$" placeholder="e.g. $ / Rs. /  / €">
+        </div>
+        <div class="fg">
+          <label>Currency Name</label>
+          <input type="text" id="cur-name" value="USD" placeholder="e.g. USD /  / EUR">
+        </div>
+      </div>
+      <div class="fg">
+        <label>Decimal Places (0–4)</label>
+        <select id="cur-decimals">
+          <option value="0">0 (e.g. 12,500)</option>
+          <option value="2" selected>2 (e.g. 12,500.75)</option>
+          <option value="3">3 (e.g. 12,500.750)</option>
+          <option value="4">4 (e.g. 12,500.7500)</option>
+        </select>
+      </div>
+      <button class="btn btn-p btn-xs" onclick="saveCurrency()">Save Currency</button>
+      <span id="cur-ok" style="display:none;font-size:10px;color:var(--ok);margin-left:8px;font-family:var(--mono)">Saved!</span>
+      <div style="margin-top:10px;font-size:11px;color:var(--t2);font-family:var(--mono)">Preview: <span id="cur-preview" style="color:var(--acc)">$ 12,500.75</span></div>
+    </div>
+
+    <div class="card">
+      <div class="sl2" style="margin-bottom:10px">Chart of Accounts</div>
+      <div id="coa-list" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div>
+      <div class="fr c3">
+        <div class="fg"><label>Code</label><input type="text" id="coa-code" placeholder="6100"></div>
+        <div class="fg"><label>Name</label><input type="text" id="coa-name" placeholder="Travel & Conveyance"></div>
+        <div class="fg"><label>Category</label>
+          <select id="coa-cat"><option value="expense">Expense</option><option value="asset">Asset</option><option value="other">Other</option></select>
+        </div>
+      </div>
+      <button class="btn btn-p btn-xs" onclick="addCOA()">Add COA</button>
+    </div>
+
+    <div class="card">
+      <div class="sl2" style="margin-bottom:10px">AX Dynamics Checkboxes</div>
+      <div class="fr c2">
+        <div class="fg"><label>Label 1</label><input type="text" id="ax1" value="Invoice Created in AX"></div>
+        <div class="fg"><label>Label 2</label><input type="text" id="ax2" value="Payment Created in AX"></div>
+        <div class="fg"><label>Label 3 (optional)</label><input type="text" id="ax3" value="Journal Posted"></div>
+        <div class="fg"><label>Label 4 (optional)</label><input type="text" id="ax4" value=""></div>
+      </div>
+      <button class="btn btn-p btn-xs" onclick="saveAX()">Save</button>
+      <span id="ax-ok" style="display:none;font-size:10px;color:var(--ok);margin-left:8px;font-family:var(--mono)">Saved!</span>
+    </div>
+
+    <div class="card">
+      <div class="sl2" style="margin-bottom:10px">PDF Column Keywords</div>
+      <div class="fr c2">
+        <div class="fg"><label>Date Keyword</label><input type="text" id="kw-date" value="date"></div>
+        <div class="fg"><label>Amount Keyword</label><input type="text" id="kw-amt" value="amount"></div>
+        <div class="fg"><label>Description Keyword</label><input type="text" id="kw-desc" value="description"></div>
+        <div class="fg"><label>Card Keyword</label><input type="text" id="kw-card" value="card"></div>
+      </div>
+      <button class="btn btn-p btn-xs" onclick="savePDF()">Save</button>
+      <span id="pdf-ok" style="display:none;font-size:10px;color:var(--ok);margin-left:8px;font-family:var(--mono)">Saved!</span>
+    </div>
+
+    <!-- BANK ACCOUNTS -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="sl2" style="margin-bottom:10px">Bank Accounts</div>
+      <div id="bank-list" style="margin-bottom:10px;max-height:160px;overflow-y:auto"></div>
+      <div class="fr c3">
+        <div class="fg"><label>Bank Name</label><input type="text" id="bank-name" placeholder="e.g. HBL, MCB"></div>
+        <div class="fg"><label>Account Number / IBAN</label><input type="text" id="bank-acc" placeholder="e.g. PK36SCBL..."></div>
+        <div class="fg"><label>Account Title</label><input type="text" id="bank-title" placeholder="e.g. Company Pvt Ltd"></div>
+      </div>
+      <button class="btn btn-p btn-xs" onclick="addBank()">Add Bank Account</button>
+    </div>
+
+    <!-- CARD → BANK ASSIGNMENT -->
+    <div class="card" style="grid-column:1/-1">
+      <div class="sl2" style="margin-bottom:10px">Card → Bank Assignment</div>
+      <div class="alert al-i" style="margin-bottom:12px">Assign a bank account to each parent card. The system will automatically use the assigned bank during payment — no prompt at payment time.</div>
+      <div id="card-bank-assign-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LINKS MODAL -->
+<div class="moverlay" id="m-links">
+  <div class="modal">
+    <div class="modal-t">Review Links</div>
+    <div class="modal-s">Individual review link for each card — copy and share</div>
+    <div id="links-body"></div>
+    <div class="brow" style="margin-top:14px"><button class="btn btn-s btn-xs" onclick="cm()">Close</button></div>
+  </div>
+</div>
+
+<!-- CARD MATCH MODAL -->
+<div class="moverlay" id="m-cardmatch">
+  <div class="modal" style="max-width:820px;width:96%">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div class="modal-t">📋 Card Matching — Upload File</div>
+        <div class="modal-s">Cards found in the file — match to existing cards or add new ones</div>
+      </div>
+      <button class="btn btn-s btn-xs" onclick="downloadTxnTemplate()" style="white-space:nowrap;margin-left:12px">⬇ Template Download</button>
+    </div>
+
+    <!-- Month & Year row -->
+    <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--t3);font-family:var(--mono);letter-spacing:.08em">STATEMENT PERIOD</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--t2);font-family:var(--mono)">Month:</label>
+        <select id="cm-month" style="font-size:11px;padding:4px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--mono)">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--t2);font-family:var(--mono)">Year:</label>
+        <input type="number" id="cm-year" min="2000" max="2099"
+          style="width:80px;font-size:11px;padding:4px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--mono)">
+      </div>
+      <span style="font-size:10px;color:var(--t2);font-family:var(--mono)">
+        — If the file contains a Month column it will be read automatically; otherwise the value set here will be used
+      </span>
+    </div>
+
+    <div id="cardmatch-body"></div>
+    <div id="cardmatch-due-dates"></div>
+    <div class="brow" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn btn-s btn-xs" onclick="cm()">Cancel</button>
+      <button class="btn btn-xs" style="background:rgba(96,168,255,.12);color:var(--acc2);border:1px solid rgba(96,168,255,.3)" onclick="addAllUnmatched()">✦ Add All Unmatched Cards</button>
+      <button class="btn btn-p" onclick="applyCardMatch()">Confirm &amp; Continue Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div class="moverlay" id="m-ok">
+  <div class="modal" style="text-align:center;padding:32px">
+    <div style="font-size:28px;color:var(--ok);margin-bottom:10px">✓</div>
+    <div class="modal-t" id="ok-t">Done!</div>
+    <div style="font-size:11px;color:var(--t2);margin-top:6px;font-family:var(--mono)" id="ok-s"></div>
+    <div class="brow" style="justify-content:center;margin-top:16px"><button class="btn btn-p" onclick="cm()">OK</button></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════
+let TXN = [];
+let CARDS = []; // { id, num, name, type, employee, dept, parentId }
+let nid = 1, cid = 1;
+
+// ── ID & DUPLICATE HELPERS ──
+function makeTxnId(cardId, stmtMonth){
+  // Format: CARDNUM-YYYYMM-NNNNN  e.g. "25000-202503-00001"
+  const card=CARDS.find(c=>c.id===cardId);
+  const cardNum=(card?.num||String(cardId||'X')).replace(/[^a-zA-Z0-9]/g,'').slice(-6).toUpperCase();
+  const mo=(stmtMonth||'').replace('-',''); // "2025-03" → "202503"
+  const serial=String(nid++).padStart(5,'0');
+  return cardNum+'-'+mo+'-'+serial;
+}
+
+// Returns true if cardId already has any transactions in stmtMonth
+function cardMonthExists(cardId, stmtMonth){
+  if(!cardId||!stmtMonth) return false;
+  return TXN.some(function(t){return t.cardId===cardId && t.stmtMonth===stmtMonth;});
+}
+
+// From a batch of rows [{cardId,stmtLabel}], return duplicate combos already in TXN
+function findDuplicatesInBatch(rows){
+  const seen={};
+  const dupes=[];
+  rows.forEach(function(r){
+    if(!r.cardId||!r.stmtLabel) return;
+    var key=r.cardId+'|'+r.stmtLabel;
+    if(cardMonthExists(r.cardId,r.stmtLabel)&&!seen[key]){
+      seen[key]=true;
+      var card=CARDS.find(function(c){return c.id===r.cardId;});
+      var cardLabel=card?(card.employee||card.name||'****'+card.num):'Card '+r.cardId;
+      dupes.push({key:key,cardLabel:cardLabel,stmtLabel:r.stmtLabel});
+    }
+  });
+  return dupes;
+}
+
+let parsedRows = [], sheetData = null;
+let AX = ['Invoice Created in AX','Payment Created in AX','Journal Posted',''];
+let COA = [
+  {code:'5100',name:'Office Supplies',cat:'expense'},
+  {code:'5200',name:'Travel & Conveyance',cat:'expense'},
+  {code:'5300',name:'Entertainment',cat:'expense'},
+  {code:'5400',name:'Utilities',cat:'expense'},
+  {code:'5500',name:'Fuel & Vehicle',cat:'expense'},
+  {code:'5600',name:'Repair & Maintenance',cat:'expense'},
+  {code:'5700',name:'Printing & Stationery',cat:'expense'},
+  {code:'5800',name:'Staff Welfare',cat:'expense'},
+  {code:'5900',name:'Miscellaneous Expense',cat:'expense'},
+];
+let PDFkw = {date:'date',amt:'amount',desc:'description',card:'card'};
+let BANKS = []; // {id, name, acc, title}
+let PAYMENTS = []; // {id, cardId, stmtMonth, amount, totalAmount, diffReason, date, bankId, ref, notes, paidAt}
+let DUE_DATES = {}; // { "cardId|stmtMonth": "YYYY-MM-DD" } — due date per parent card per statement month
+let bid = 1; // bank id counter
+let pyid = 1; // payment id counter
+let CUR = {symbol:'$', name:'USD', decimals:2};
+let ADMIN_MODE = false; // Set to true only when admin logs in
+const ADMIN_PASSWORD = 'admin123'; // Change this to your desired password
+
+// All possible report fields
+const ALLFIELDS = [
+  {key:'stmtMonth',label:'Statement Month'},
+  {key:'txnMonth',label:'Transaction Month'},
+  {key:'sno',label:'S.No'},
+  {key:'date',label:'Date'},
+  {key:'merchant',label:'Merchant/Description'},
+  {key:'amount',label:'Amount'},
+  {key:'cardType',label:'Card Type'},
+  {key:'parentCard',label:'Parent Card No'},
+  {key:'childCard',label:'Child Card No'},
+  {key:'employee',label:'Employee'},
+  {key:'dept',label:'Department'},
+  {key:'market',label:'Market'},
+  {key:'location',label:'Location'},
+  {key:'uids',label:'UIDs'},
+  {key:'person',label:'Performed By'},
+  {key:'invoice',label:'Invoice No'},
+  {key:'coa',label:'Chart of Account'},
+  {key:'comments',label:'Comments'},
+  {key:'ax0',label:'AX: Invoice Created'},
+  {key:'ax1',label:'AX: Payment Created'},
+  {key:'ax2',label:'AX: Journal Posted'},
+  {key:'ax3',label:'AX: Field 4'},
+  {key:'status',label:'Status'},
+];
+let selectedFields = ['sno','date','txnMonth','merchant','amount','cardType','parentCard','childCard','employee','dept','market','location','uids','person','invoice','coa','comments','ax0','ax1','status'];
+
+// ══════════════════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════════════════
+function gv(v, el) {
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  if(el) el.classList.add('on');
+  if(v==='admin') { renderDash(); renderCardProgress(); }
+  if(v==='report') { populateReportCardFilter(); renderReportFields(); renderReportTable(); renderReportStats(); }
+  if(v==='review') { populateReviewFilter(); renderReview(); }
+  if(v==='cards') { renderCardTree(); populateCardSelects(); }
+  if(v==='payment') { populatePaymentMonthFilter(); renderPayment(); }
+  if(v==='settings') { renderCOAList(); renderBankList(); renderCardBankAssign(); updateCurrencyPreview(); populateBankSelects();
+    ['cur-symbol','cur-name','cur-decimals'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('input',updateCurrencyPreview);
+    });
+  }
+}
+function cm(){document.querySelectorAll('.moverlay').forEach(m=>m.classList.remove('on'));}
+document.querySelectorAll('.moverlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)cm();}));
+function ok(title,sub){document.getElementById('ok-t').textContent=title;document.getElementById('ok-s').textContent=sub;document.getElementById('m-ok').classList.add('on');}
+
+function toggleAdminMode(){
+  if(ADMIN_MODE){
+    ADMIN_MODE=false;
+    document.getElementById('admin-badge').style.display='none';
+    document.getElementById('admin-btn').textContent='Admin Login';
+    document.getElementById('admin-btn').style.color='var(--t2)';
+    renderReview();
+  } else {
+    const pwd=prompt('Enter Admin Password:');
+    if(pwd===ADMIN_PASSWORD){
+      ADMIN_MODE=true;
+      document.getElementById('admin-badge').style.display='inline';
+      document.getElementById('admin-btn').textContent='Logout Admin';
+      document.getElementById('admin-btn').style.color='var(--acc3)';
+      renderReview();
+    } else if(pwd!==null){
+      alert('Incorrect password!');
+    }
+  }
+}
+function fmt(n){
+  const d=CUR.decimals||0;
+  return CUR.symbol+' '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function fmtRaw(n){
+  const d=CUR.decimals||0;
+  return Number(n||0).toFixed(d);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════════════════════
+function refresh(){
+  const tot=TXN.length, amt=TXN.reduce((a,t)=>a+(+t.amount||0),0);
+  const rev=TXN.filter(t=>t.reviewed).length;
+  const ax=TXN.filter(t=>t.rd&&(t.rd.ax0||t.rd.ax1)).length;
+  const cards=new Set(TXN.map(t=>t.cardId)).size;
+  document.getElementById('st-total').textContent=tot;
+  document.getElementById('st-amt').textContent=fmt(amt);
+  document.getElementById('st-rev').textContent=rev;
+  document.getElementById('st-pend').textContent=tot-rev;
+  document.getElementById('st-ax').textContent=ax;
+  document.getElementById('st-cards').textContent=cards;
+  // update stat label
+  populatePaymentMonthFilter();
+  const amtLbl=document.querySelector('#v-admin .stat:nth-child(2) .sl');
+  if(amtLbl) amtLbl.textContent='Total '+CUR.name;
+  renderDash(); renderCardProgress();
+  populateReviewFilter(); populateUploadCardSel();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CARD MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════
+// pc-type listener removed (simplified card model)
+
+function addParentCard(){
+  const num=document.getElementById('pc-num').value.trim().replace(/[^0-9a-zA-Z]/g,'');
+  const name=document.getElementById('pc-name').value.trim();
+  const dept=document.getElementById('pc-dept').value.trim();
+  const bankId=parseInt(document.getElementById('pc-bank')?.value)||null;
+  if(!num) return alert('Card number is required.');
+  const numKey=num.slice(-5);
+  if(CARDS.find(c=>!c.parentId&&c.num.slice(-5)===numKey)) return alert('Parent card with this number already exists!');
+  CARDS.push({id:cid++,num:numKey,name,type:'shared',employee:'',dept,parentId:null,bankId});
+  ['pc-num','pc-name','pc-dept'].forEach(id=>document.getElementById(id).value='');
+  const pcBank=document.getElementById('pc-bank');if(pcBank)pcBank.value='';
+  renderCardTree(); populateCardSelects(); populateUploadCardSel(); refresh();
+}
+
+function addChildCard(){
+  const pid=parseInt(document.getElementById('cc-parent').value);
+  const num=document.getElementById('cc-num').value.trim().replace(/[^0-9a-zA-Z]/g,'');
+  const emp=document.getElementById('cc-emp').value.trim();
+  const dept=document.getElementById('cc-dept').value.trim();
+  if(!pid) return alert('Please select a parent card.');
+  if(!num) return alert('Child card number is required.');
+  const numKey=num.slice(-5);
+  if(CARDS.find(c=>c.parentId===pid&&c.num.slice(-5)===numKey)) return alert('This child card already exists under this parent!');
+  const parent=CARDS.find(c=>c.id===pid);
+  CARDS.push({id:cid++,num:numKey,name:emp||numKey,type:'personal',employee:emp,dept:dept||parent?.dept||'',parentId:pid});
+  ['cc-num','cc-emp','cc-dept'].forEach(id=>document.getElementById(id).value='');
+  renderCardTree(); populateCardSelects(); populateUploadCardSel(); refresh();
+}
+
+function fillChildDept(){
+  const pid=parseInt(document.getElementById('cc-parent').value);
+  const p=CARDS.find(c=>c.id===pid);
+  if(p){
+    document.getElementById('cc-dept').value=p.dept||'';
+  }
+}
+
+function renderCardTree(){
+  const parents=CARDS.filter(c=>!c.parentId);
+  if(!parents.length){document.getElementById('card-tree').innerHTML='<div class="empty">No cards found.</div>';return;}
+  let h='';
+  parents.forEach(p=>{
+    const children=CARDS.filter(c=>c.parentId===p.id);
+    const txnCount=TXN.filter(t=>t.cardId===p.id).length;
+    const childTxns=children.reduce((a,ch)=>a+TXN.filter(t=>t.cardId===ch.id).length,0);
+    h+=`<div style="margin-bottom:10px">
+      <div class="card-tree-item card-tree-parent" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="bdg bdg-parent">PARENT</span>
+          <span style="font-weight:700;font-size:13px;font-family:var(--mono)">****${p.num}</span>
+          <span style="font-size:11px;color:var(--t1)">${p.name||'—'}</span>
+          ${p.dept?`<span style="font-size:10px;color:var(--t2)">${p.dept}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${p.bankId?`<span style="font-size:10px;color:var(--t2);font-family:var(--mono)">${BANKS.find(b=>b.id===p.bankId)?.name||''}</span>`:''}
+          <span style="font-size:10px;color:var(--t2);font-family:var(--mono)">${children.length} cardholders · ${txnCount+childTxns} txns</span>
+          <button class="btn btn-d btn-xs" onclick="delCard(${p.id})">Del</button>
+        </div>
+      </div>`;
+    if(children.length===0){
+      h+=`<div style="margin-left:20px;padding:6px 12px;font-size:10px;color:var(--t3);font-family:var(--mono)">└─ No child cardholders — transactions go to parent card directly</div>`;
+    }
+    children.forEach((ch,ci)=>{
+      const ct=TXN.filter(t=>t.cardId===ch.id).length;
+      const isLast=ci===children.length-1;
+      h+=`<div class="card-tree-item card-tree-child" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="tree-line">${isLast?'└─':'├─'}</span>
+          <span class="bdg bdg-child">CHILD</span>
+          <span style="font-family:var(--mono);font-size:12px;font-weight:600">****${ch.num}</span>
+          <span style="font-size:12px;color:var(--t1)">${ch.employee||'—'}</span>
+          ${ch.dept?`<span style="font-size:10px;color:var(--t2)">${ch.dept}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--t2);font-family:var(--mono)">${ct} txns</span>
+          <button class="btn btn-d btn-xs" onclick="delCard(${ch.id})">Del</button>
+        </div>
+      </div>`;
+    });
+    h+='</div>';
+  });
+  document.getElementById('card-tree').innerHTML=h;
+}
+
+function delCard(id){
+  if(!confirm('Delete this card? Transactions linked to it will be unlinked.')) return;
+  CARDS=CARDS.filter(c=>c.id!==id&&c.parentId!==id);
+  TXN.forEach(t=>{if(t.cardId===id)t.cardId=null;});
+  renderCardTree(); populateCardSelects(); populateUploadCardSel(); refresh();
+}
+
+function populateCardSelects(){
+  const parents=CARDS.filter(c=>!c.parentId);
+  const html='<option value="">-- Parent Card Select --</option>'+
+    parents.map(c=>`<option value="${c.id}">****${c.num} — ${c.name||c.dept||'—'}</option>`).join('');
+  document.getElementById('cc-parent').innerHTML=html;
+}
+
+function populateUploadCardSel(){
+  // Populate PARENT card dropdown (only parent cards = no parentId)
+  const parents=CARDS.filter(c=>!c.parentId);
+  const parentHtml='<option value="">-- Select Parent Card --</option>'+
+    parents.map(c=>`<option value="${c.id}">****${c.num} — ${c.name||c.dept||'—'}</option>`).join('');
+  const pSel=document.getElementById('up-parent-sel');
+  if(pSel) pSel.innerHTML=parentHtml;
+  // Reset child dropdown
+  const cSel=document.getElementById('up-child-sel');
+  if(cSel) cSel.innerHTML='<option value="">-- No Child Card --</option>';
+  updateUpCardInfo();
+}
+
+function onUpParentChange(){
+  const parentId=parseInt(document.getElementById('up-parent-sel').value)||null;
+  const cSel=document.getElementById('up-child-sel');
+  if(!cSel) return;
+  if(!parentId){
+    cSel.innerHTML='<option value="">-- No Child Card --</option>';
+    updateUpCardInfo();
+    return;
+  }
+  // Find children of selected parent
+  const children=CARDS.filter(c=>c.parentId===parentId);
+  if(children.length===0){
+    // No children — hide child dropdown
+    cSel.innerHTML='<option value="">-- No Child Card --</option>';
+    document.getElementById('up-child-wrap').style.opacity='0.4';
+    document.getElementById('up-child-wrap').style.pointerEvents='none';
+  } else {
+    // Show children
+    cSel.innerHTML='<option value="">-- No Child Card (use parent only) --</option>'+
+      children.map(c=>`<option value="${c.id}">****${c.num} — ${c.employee||c.dept||'—'}</option>`).join('');
+    document.getElementById('up-child-wrap').style.opacity='1';
+    document.getElementById('up-child-wrap').style.pointerEvents='auto';
+  }
+  updateUpCardInfo();
+}
+
+function onUpChildChange(){
+  updateUpCardInfo();
+}
+
+function updateUpCardInfo(){
+  const parentId=parseInt(document.getElementById('up-parent-sel')?.value)||null;
+  const childId=parseInt(document.getElementById('up-child-sel')?.value)||null;
+  const infoDiv=document.getElementById('up-card-info');
+
+  // Determine which card to use (child if selected, else parent)
+  const activeId=childId||parentId;
+  const card=CARDS.find(c=>c.id===activeId);
+  const parentCard=CARDS.find(c=>c.id===parentId);
+
+  if(!card||!parentId){
+    if(infoDiv) infoDiv.style.display='none';
+    // Clear hidden fields
+    document.getElementById('up-card-sel').value='';
+    document.getElementById('up-type').value='personal';
+    document.getElementById('up-emp').value='';
+    document.getElementById('up-dept').value='';
+    return;
+  }
+
+  // Update hidden legacy fields used by confirmImport
+  document.getElementById('up-card-sel').value=activeId;
+  document.getElementById('up-type').value=card.type||'personal';
+  document.getElementById('up-emp').value=card.employee||'';
+  document.getElementById('up-dept').value=card.dept||'';
+
+  // Show info preview
+  if(infoDiv){
+    infoDiv.style.display='block';
+    document.getElementById('uci-parent').textContent=`****${parentCard.num} — ${parentCard.name||parentCard.employee||parentCard.dept||'—'}`;
+    const childWrap=document.getElementById('uci-child-wrap');
+    if(childId && card.parentId){
+      childWrap.style.display='inline';
+      document.getElementById('uci-child').textContent=`****${card.num} — ${card.employee||card.dept||'—'}`;
+    } else {
+      childWrap.style.display='none';
+    }
+    document.getElementById('uci-emp').textContent=card.employee||'—';
+    document.getElementById('uci-dept').textContent=card.dept||parentCard.dept||'—';
+    document.getElementById('uci-type').textContent=card.type==='personal'?'Personal':'Shared';
+  }
+}
+
+function onUpCardChange(){ updateUpCardInfo(); } // legacy compat
+
+function getCardInfo(cardId){
+  const card=CARDS.find(c=>c.id===cardId);
+  if(!card) return {parentNum:'',childNum:'',employee:'',dept:'',type:'personal'};
+  const parent=card.parentId?CARDS.find(p=>p.id===card.parentId):null;
+  return {
+    parentNum: parent?parent.num:card.num,
+    childNum: parent?card.num:'',
+    employee: card.employee||'',
+    dept: card.dept||'',
+    type: card.type,
+    cardNum: card.num
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// UPLOAD & PARSE
+// ══════════════════════════════════════════════════════════════════════
+function handleDrop(e){e.preventDefault();document.getElementById('dz').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);}
+function handleFile(file){
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  document.getElementById('up-card-sec').style.display='block';
+  populateUploadCardSel();
+  if(ext==='pdf') parsePDF(file);
+  else if(['xlsx','xls'].includes(ext)) parseExcel(file);
+  else if(ext==='csv') parseCSVfile(file);
+  else alert('Only PDF, XLSX, XLS and CSV files are supported.');
+}
+
+async function parsePDF(file){
+  showUpWarn('Parsing PDF, please wait...','al-i');
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let allText='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const tc=await page.getTextContent();
+      const items=tc.items.sort((a,b)=>{const dy=Math.abs(b.transform[5]-a.transform[5]);return dy>5?b.transform[5]-a.transform[5]:a.transform[4]-b.transform[4];});
+      let lastY=null;
+      items.forEach(item=>{const y=Math.round(item.transform[5]);if(lastY!==null&&Math.abs(y-lastY)>5)allText+='\n';allText+=item.str+'\t';lastY=y;});
+      allText+='\n';
+    }
+    const rows=pdfToRows(allText);
+    showParsed(rows,file.name);
+  }catch(e){showUpWarn('PDF parse error: '+e.message+' — Try CSV/Excel instead.','al-w');}
+}
+
+function pdfToRows(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+  const rows=[];
+  const dateRe=/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{2}[\/\-]\d{2})/;
+  const amtRe=/(|Rs\.?|USD)?\s*([\d,]+\.?\d{0,2})/i;
+  lines.forEach(line=>{
+    const dm=line.match(dateRe);const am=line.match(amtRe);
+    if(dm&&am){
+      const parts=line.split(/\t+/).map(p=>p.trim()).filter(Boolean);
+      const amount=parseFloat(am[2].replace(/,/g,''))||0;
+      if(amount<=0) return;
+      let desc=parts.filter(p=>!p.match(dateRe)&&!p.match(/^(|Rs\.?)?\s*[\d,]+\.?\d*$/i)&&p.length>1).join(' ').substring(0,80);
+      if(!desc) desc=line.replace(dm[0],'').replace(am[0],'').replace(/\t+/g,' ').trim().substring(0,80);
+      rows.push({date:normDate(dm[1]),desc:desc.trim(),amount,card:''});
+    }
+  });
+  return rows;
+}
+
+function xlSerialToDate(serial){
+  // Excel date serial: days since 1900-01-00 (with leap year bug)
+  const d=new Date((serial-25569)*86400*1000);
+  if(isNaN(d)) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function normMonth(raw){
+  // Converts various month formats to "YYYY-MM"
+  if(!raw) return '';
+  const s=String(raw).trim();
+  // Already YYYY-MM
+  if(/^\d{4}-\d{2}$/.test(s)) return s;
+  // "May-26" or "May 26" or "May-2026" or "May 2026"
+  const monthNames={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
+                    jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+  const m=s.match(/([a-zA-Z]{3,})[\s\-\/]+([\d]{2,4})/);
+  if(m){
+    const mon=monthNames[m[1].toLowerCase().substring(0,3)];
+    const yr=m[2].length===2?'20'+m[2]:m[2];
+    if(mon&&yr) return yr+'-'+mon;
+  }
+  // "05-2026" or "05/2026" or "2026/05"
+  const p=s.replace(/[\/\-]/g,'-').split('-');
+  if(p.length===2){
+    if(p[0].length===4) return p[0]+'-'+p[1].padStart(2,'0');
+    if(p[1].length===4) return p[1]+'-'+p[0].padStart(2,'0');
+    // "05-26" → assume 20YY
+    return '20'+p[1]+'-'+p[0].padStart(2,'0');
+  }
+  return '';
+}
+
+function normDate(d){
+  if(d===null||d===undefined||d==='') return '';
+  // If it's a number or numeric string (Excel serial)
+  const num=Number(d);
+  if(!isNaN(num)&&num>40000&&num<60000) return xlSerialToDate(num);
+  const s=String(d).trim();
+  // Already ISO
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  const p=s.replace(/[\/\-\.]/g,'-').split('-');
+  if(p.length!==3) return s;
+  if(p[0].length===4) return p[0]+'-'+p[1].padStart(2,'0')+'-'+p[2].padStart(2,'0');
+  const yr=p[2].length===2?'20'+p[2]:p[2];
+  return yr+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+}
+
+function parseExcel(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    processSheet(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}),file.name);
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseCSVfile(file){
+  const r=new FileReader();
+  r.onload=e=>{const lines=e.target.result.split('\n').map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));processSheet(lines,file.name);};
+  r.readAsText(file);
+}
+
+function processSheet(data,fname){
+  if(!data||!data.length){showUpWarn('File empty.','al-w');return;}
+  const hdrs=data[0].map(h=>String(h).toLowerCase().trim());
+  const kw=PDFkw;
+
+  // Detect columns
+  const dI=hdrs.findIndex(h=>h.includes(kw.date)||h.includes('tran')||h.includes('value date'));
+  const mI=hdrs.findIndex(h=>h.includes(kw.desc)||h.includes('merchant')||h.includes('narr')||h.includes('detail')||h.includes('particular'));
+  const aI=hdrs.findIndex(h=>h.includes(kw.amt)||h.includes('debit')||h.includes('withdrawl')||h.includes('value'));
+  // Detect month column (e.g. "Month", "Statement Month")
+  const monthColI=hdrs.findIndex(h=>h==='month'||h.includes('stmt month')||h.includes('statement month')||h==='txn month');
+  // Detect parent/child card columns
+  const parentColI=hdrs.findIndex(h=>h.includes('parent')||(h.includes('card')&&h.includes('name')&&!h.includes('child')));
+  const childColI=hdrs.findIndex(h=>h.includes('child')||(h.includes('card')&&h.includes('name')&&hdrs.indexOf(h)!==parentColI));
+  const cI=hdrs.findIndex(h=>(h.includes(kw.card)||h.includes('acct'))&&h!==hdrs[parentColI]&&h!==hdrs[childColI]);
+
+  sheetData=data.slice(1);
+
+  // If file has Parent/Child card columns → trigger smart card matching
+  if(parentColI>=0||childColI>=0){
+    _detectedParentCol=parentColI;
+    _detectedChildCol=childColI;
+    _detectedDateCol=dI;
+    _detectedDescCol=mI;
+    _detectedAmtCol=aI;
+    _detectedMonthCol=monthColI;
+    _uploadFname=fname;
+    triggerCardMatchModal(data);
+    return;
+  }
+
+  const mapDiv=document.getElementById('up-map-fields');
+  const noOpt='<option value="-1">-- Skip --</option>';
+  const opts=hdrs.map((h,i)=>`<option value="${i}">${h||(i+1)}</option>`).join('');
+  mapDiv.innerHTML=`
+    <div class="fg"><label>Date Column</label><select id="cm-d">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Description Column</label><select id="cm-m">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Amount Column</label><select id="cm-a">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Card No Column (optional)</label><select id="cm-c">${noOpt}${opts}</select></div>`;
+  if(dI>=0)document.getElementById('cm-d').value=dI;
+  if(mI>=0)document.getElementById('cm-m').value=mI;
+  if(aI>=0)document.getElementById('cm-a').value=aI;
+  if(cI>=0)document.getElementById('cm-c').value=cI;
+  document.getElementById('up-file-info').textContent=fname+' — '+(data.length-1)+' rows, '+hdrs.length+' columns';
+  document.getElementById('up-map-sec').style.display='block';
+  document.getElementById('up-prev-sec').style.display='none';
+}
+
+// ── SMART CARD MATCHING ──
+let _detectedParentCol=-1,_detectedChildCol=-1,_detectedDateCol=-1,_detectedDescCol=-1,_detectedAmtCol=-1,_detectedMonthCol=-1,_uploadFname='';
+let _cardMatchMap={}; // { "PARENT_NUM|CHILD_NUM": cardId } or { "PARENT_NUM": cardId }
+
+function normalizeCardKey(str){
+  // Extract last 5 alphanumeric chars as card key
+  const s=String(str||'').replace(/[^a-zA-Z0-9]/g,'');
+  return s.slice(-5).toUpperCase();
+}
+
+function findMatchingCard(parentKey, childKey){
+  // Try to find child card first
+  if(childKey){
+    const child=CARDS.find(c=>c.parentId&&normalizeCardKey(c.num)===childKey);
+    if(child) return child.id;
+  }
+  // Try parent card
+  if(parentKey){
+    const parent=CARDS.find(c=>!c.parentId&&normalizeCardKey(c.num)===parentKey);
+    if(parent) return parent.id;
+  }
+  return null;
+}
+
+function triggerCardMatchModal(data){
+  const hdrs=data[0].map(h=>String(h).toLowerCase().trim());
+  const rows=data.slice(1);
+
+  // Collect unique parent+child combos from file
+  const combos=new Map(); // key="PARENT|CHILD" => {parentRaw, childRaw, count}
+  rows.forEach(row=>{
+    const parentRaw=_detectedParentCol>=0?String(row[_detectedParentCol]||'').trim():'';
+    const childRaw=_detectedChildCol>=0?String(row[_detectedChildCol]||'').trim():'';
+    if(!parentRaw&&!childRaw) return;
+    const parentKey=normalizeCardKey(parentRaw);
+    const childKey=normalizeCardKey(childRaw);
+    const comboKey=(parentKey||'')+'|'+(childKey||'');
+    if(!combos.has(comboKey)) combos.set(comboKey,{parentRaw,childRaw,parentKey,childKey,count:0});
+    combos.get(comboKey).count++;
+  });
+
+  _cardMatchMap={};
+  let html='';
+
+  // Build system card options
+  const sysOpts='<option value="">-- Select Card --</option>'+
+    CARDS.filter(c=>!c.parentId).map(p=>{
+      const children=CARDS.filter(c=>c.parentId===p.id);
+      let opts=`<optgroup label="Parent: ****${p.num} — ${p.name||p.dept||'—'}">`;
+      opts+=`<option value="${p.id}">  ****${p.num} (Parent only)</option>`;
+      children.forEach(ch=>{
+        opts+=`<option value="${ch.id}">  ****${ch.num} — ${ch.employee||'—'} (Child)</option>`;
+      });
+      opts+='</optgroup>';
+      return opts;
+    }).join('');
+
+  combos.forEach(({parentRaw,childRaw,parentKey,childKey,count},comboKey)=>{
+    const autoMatch=findMatchingCard(parentKey,childKey);
+    if(autoMatch) _cardMatchMap[comboKey]=autoMatch;
+
+    const matchStatus=autoMatch
+      ? `<span style="color:var(--ok);font-size:10px;font-family:var(--mono)">✓ Auto-matched</span>`
+      : `<span style="color:var(--warn);font-size:10px;font-family:var(--mono)">⚠ Not found</span>`;
+
+    html+=`<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <!-- File info -->
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:4px">FILE CARD (${count} transactions)</div>
+          ${parentRaw?`<div style="font-size:12px;font-weight:600">${parentRaw}</div>`:''}
+          ${childRaw?`<div style="font-size:11px;color:var(--acc2)">${childRaw}</div>`:''}
+          <div style="margin-top:4px">${matchStatus}</div>
+        </div>
+        <!-- System match -->
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:4px">MATCH TO SYSTEM CARD</div>
+          <select style="width:100%;font-size:11px;padding:5px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--mono)"
+            id="cmatch-${comboKey.replace(/[^a-zA-Z0-9]/g,'_')}"
+            onchange="_cardMatchMap['${comboKey}']=this.value?parseInt(this.value):null;this.style.borderColor=this.value?'var(--ok)':'var(--b1)'">
+            ${sysOpts}
+          </select>
+        </div>
+        <!-- Quick add new child -->
+        <div style="min-width:180px">
+          <div style="font-size:10px;color:var(--t3);font-family:var(--mono);margin-bottom:4px">OR ADD NEW</div>
+          <div style="display:flex;gap:4px">
+            <input type="text" placeholder="Employee name" id="cmadd-emp-${comboKey.replace(/[^a-zA-Z0-9]/g,'_')}"
+              style="flex:1;font-size:10px;padding:4px 7px;background:var(--bg);border:1px solid var(--b1);border-radius:5px;color:var(--t1);font-family:var(--mono)">
+            <button class="btn btn-p btn-xs" style="white-space:nowrap"
+              onclick="quickAddFromMatch('${comboKey}','${parentKey}','${childKey}','${parentRaw}','${childRaw}')">+ Add</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Set auto-matched selects after render
+  document.getElementById('cardmatch-body').innerHTML=html||'<div class="empty">No card columns detected in file.</div>';
+
+  // Build due date section: one date field per unique PARENT card in file
+  const parentKeys=[...new Set([...combos.values()].map(c=>c.parentKey).filter(Boolean))];
+  let dueHtml='';
+  if(parentKeys.length){
+    dueHtml+=`<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px 14px;margin-top:10px">
+      <div style="font-size:10px;color:var(--t3);font-family:var(--mono);letter-spacing:.08em;margin-bottom:10px">PAYMENT DUE DATES — set per parent card for this statement period</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">`;
+    parentKeys.forEach(pk=>{
+      const existCard=CARDS.find(c=>!c.parentId&&normalizeCardKey(c.num)===pk);
+      const label=existCard?(existCard.name||'****'+existCard.num):'****'+pk+' (new)';
+      dueHtml+=`<div class="fg">
+        <label style="font-size:10px;color:var(--t2);font-family:var(--mono)">${label}</label>
+        <input type="date" id="cm-due-${pk}"
+          style="width:100%;font-size:12px;font-family:var(--mono);background:var(--bg);border:1px solid var(--acc2);border-radius:6px;color:var(--t1);padding:6px 8px;cursor:pointer">
+      </div>`;
+    });
+    dueHtml+='</div></div>';
+  }
+  document.getElementById('cardmatch-due-dates').innerHTML=dueHtml;
+
+  // Set dropdown values for auto-matches
+  combos.forEach(({parentKey,childKey},comboKey)=>{
+    const autoMatch=findMatchingCard(parentKey,childKey);
+    if(autoMatch){
+      const selId='cmatch-'+comboKey.replace(/[^a-zA-Z0-9]/g,'_');
+      const sel=document.getElementById(selId);
+      if(sel) sel.value=autoMatch;
+    }
+  });
+
+  // Set modal month/year to current (or from up-month/up-year)
+  const _cmMo=document.getElementById('cm-month');
+  const _cmYr=document.getElementById('cm-year');
+  const _upMo=document.getElementById('up-month')?.value||String(new Date().getMonth()+1).padStart(2,'0');
+  const _upYr=document.getElementById('up-year')?.value||new Date().getFullYear();
+  if(_cmMo) _cmMo.value=_upMo;
+  if(_cmYr) _cmYr.value=_upYr;
+  document.getElementById('m-cardmatch').classList.add('on');
+}
+
+function quickAddFromMatch(comboKey,parentKey,childKey,parentRaw,childRaw){
+  const empInputId='cmadd-emp-'+comboKey.replace(/[^a-zA-Z0-9]/g,'_');
+  const empName=document.getElementById(empInputId)?.value.trim()||childRaw||parentRaw;
+
+  // Find or create parent
+  let parent=CARDS.find(c=>!c.parentId&&normalizeCardKey(c.num)===parentKey);
+  if(!parent&&parentKey){
+    parent={id:cid++,num:parentKey,name:parentRaw,type:'shared',employee:'',dept:'',parentId:null};
+    CARDS.push(parent);
+  }
+
+  let newCardId=null;
+  if(childKey&&parent){
+    // Add as child card
+    const existing=CARDS.find(c=>c.parentId===parent.id&&normalizeCardKey(c.num)===childKey);
+    if(existing){
+      alert('This child card already exists: ****'+existing.num+' ('+existing.employee+')');
+      newCardId=existing.id;
+    } else {
+      const newChild={id:cid++,num:childKey,name:empName||childKey,type:'personal',employee:empName,dept:parent.dept||'',parentId:parent.id};
+      CARDS.push(newChild);
+      newCardId=newChild.id;
+    }
+  } else if(parent){
+    newCardId=parent.id;
+  }
+
+  if(newCardId){
+    _cardMatchMap[comboKey]=newCardId;
+    // Update dropdown
+    const selId='cmatch-'+comboKey.replace(/[^a-zA-Z0-9]/g,'_');
+    renderCardTree(); populateCardSelects(); populateUploadCardSel();
+    // Rebuild just that select
+    const sysOpts2='<option value="">-- Select Card --</option>'+
+      CARDS.filter(c=>!c.parentId).map(p=>{
+        const children=CARDS.filter(c=>c.parentId===p.id);
+        let opts=`<optgroup label="Parent: ****${p.num} — ${p.name||p.dept||'—'}">`;
+        opts+=`<option value="${p.id}">  ****${p.num} (Parent only)</option>`;
+        children.forEach(ch=>{ opts+=`<option value="${ch.id}">  ****${ch.num} — ${ch.employee||'—'} (Child)</option>`; });
+        opts+='</optgroup>';
+        return opts;
+      }).join('');
+    const sel=document.getElementById(selId);
+    if(sel){sel.innerHTML=sysOpts2;sel.value=newCardId;}
+    // Show success
+    const inpEl=document.getElementById(empInputId);
+    if(inpEl) inpEl.style.borderColor='var(--ok)';
+  }
+}
+
+function applyCardMatch(){
+  // Build parsedRows from sheetData using detected columns + cardMatchMap
+  const rows=[];
+  // Fallback month — first from modal month picker, then upload dropdowns
+  const fallbackMo=document.getElementById('cm-month')?.value||document.getElementById('up-month')?.value||String(new Date().getMonth()+1).padStart(2,'0');
+  const fallbackYr=document.getElementById('cm-year')?.value||document.getElementById('up-year')?.value||new Date().getFullYear();
+  const fallbackLabel=fallbackYr+'-'+fallbackMo;
+
+  (sheetData||[]).forEach(row=>{
+    const parentRaw=_detectedParentCol>=0?String(row[_detectedParentCol]||'').trim():'';
+    const childRaw=_detectedChildCol>=0?String(row[_detectedChildCol]||'').trim():'';
+    const parentKey=normalizeCardKey(parentRaw);
+    const childKey=normalizeCardKey(childRaw);
+    const comboKey=(parentKey||'')+'|'+(childKey||'');
+
+    const cardId=_cardMatchMap[comboKey]||null;
+
+    const dateRaw=_detectedDateCol>=0?String(row[_detectedDateCol]||'').trim():'';
+    const desc=_detectedDescCol>=0?String(row[_detectedDescCol]||'').trim():'';
+    const rawAmt=_detectedAmtCol>=0?String(row[_detectedAmtCol]||'').replace(/[^0-9.\-]/g,''):'0';
+    const amt=Math.abs(parseFloat(rawAmt)||0);
+
+    // Read month from file column if detected, else fallback
+    let stmtLabel=fallbackLabel;
+    if(_detectedMonthCol>=0){
+      const monthRaw=String(row[_detectedMonthCol]||'').trim();
+      const parsed=normMonth(monthRaw);
+      if(parsed) stmtLabel=parsed;
+    }
+
+    if((!dateRaw&&!desc)||amt<=0) return;
+
+    const ci=cardId?getCardInfo(cardId):{parentNum:'',childNum:'',employee:'',dept:'',type:'personal'};
+    rows.push({
+      date:normDate(dateRaw)||dateRaw,
+      desc:desc.substring(0,100),
+      amount:amt,
+      cardId,
+      employee:ci.employee||'',
+      dept:ci.dept||'',
+      cardType:ci.type||'personal',
+      stmtLabel
+    });
+  });
+
+  // Save due dates from modal inputs per parent card
+  (sheetData||[]).forEach(row=>{
+    const parentRaw=_detectedParentCol>=0?String(row[_detectedParentCol]||'').trim():'';
+    const parentKey=normalizeCardKey(parentRaw);
+    if(!parentKey) return;
+    const dueInp=document.getElementById('cm-due-'+parentKey);
+    if(!dueInp||!dueInp.value) return;
+    // Find the matched card and its parent
+    const childRaw=_detectedChildCol>=0?String(row[_detectedChildCol]||'').trim():'';
+    const childKey=normalizeCardKey(childRaw);
+    const comboKey=(parentKey||'')+'|'+(childKey||'');
+    const cardId=_cardMatchMap[comboKey];
+    if(!cardId) return;
+    const card=CARDS.find(c=>c.id===cardId);
+    const parentId=card?.parentId||cardId;
+    const mo=document.getElementById('cm-month')?.value||String(new Date().getMonth()+1).padStart(2,'0');
+    const yr=document.getElementById('cm-year')?.value||new Date().getFullYear();
+    const stmtLabel=yr+'-'+mo;
+    DUE_DATES[parentId+'|'+stmtLabel]=dueInp.value;
+  });
+
+  cm(); // close modal
+
+  if(!rows.length){showUpWarn('No valid rows found after card matching.','al-w');return;}
+
+  // ── DUPLICATE CHECK for multi-card: warn per duplicate card+month ──
+  const dupes=findDuplicatesInBatch(rows);
+  if(dupes.length){
+    const dupeList=dupes.map(d=>'• '+d.cardLabel+' ('+d.stmtLabel+')').join('\n');
+    const proceed=confirm(
+      '⛔ Duplicate Upload Warning!\n\nThese cards already have data uploaded for this month:\n'+dupeList+
+      '\n\nOnly non-duplicate cards will be imported. Duplicate cards will be skipped.\n\nContinue?'
+    );
+    if(!proceed) return;
+  }
+
+  // Import, skipping card+month combos that existed BEFORE this import started
+  // Check is done once before loop — not inside loop — so multiple txns per card work correctly
+  const alreadyExistingKeys=new Set(
+    dupes.map(function(d){return d.key;}) // key = "cardId|stmtLabel"
+  );
+  let added=0, skippedDupe=0;
+  rows.forEach(r=>{
+    const key=r.cardId+'|'+r.stmtLabel;
+    if(alreadyExistingKeys.has(key)){skippedDupe++;return;}
+    TXN.push({id:makeTxnId(r.cardId,r.stmtLabel),
+      date:r.date,merchant:r.desc,amount:r.amount,
+      cardType:r.cardType,cardId:r.cardId,
+      employee:r.employee,dept:r.dept,
+      stmtMonth:r.stmtLabel,txnMonth:r.stmtLabel,
+      reviewed:false,rd:null});
+    added++;
+  });
+  refresh();
+  resetUp();
+  const skipNote=skippedDupe?' ('+skippedDupe+' rows skipped — duplicate card+month)':'';
+  ok(added+' Transactions Imported!','Multi-card file processed.'+skipNote+' Check the Dashboard.');
+}
+
+function doMap(){
+  const dI=parseInt(document.getElementById('cm-d').value);
+  const mI=parseInt(document.getElementById('cm-m').value);
+  const aI=parseInt(document.getElementById('cm-a').value);
+  const cI=parseInt(document.getElementById('cm-c').value);
+  const rows=[];
+  (sheetData||[]).forEach(row=>{
+    const date=dI>=0?String(row[dI]||'').trim():'';
+    const desc=mI>=0?String(row[mI]||'').trim():'';
+    const rawAmt=aI>=0?String(row[aI]||'').replace(/[^0-9.\-]/g,''):'0';
+    const card=cI>=0?String(row[cI]||'').slice(-4):'';
+    const amt=Math.abs(parseFloat(rawAmt)||0);
+    if((date||desc)&&amt>0)rows.push({date:normDate(date)||date,desc:desc.substring(0,80),amount:amt,card});
+  });
+  if(!rows.length){showUpWarn('No valid rows found. Check column mapping.','al-w');return;}
+  showParsed(rows,'');
+  document.getElementById('up-map-sec').style.display='none';
+}
+
+function showParsed(rows,fname){
+  parsedRows=rows;
+  document.getElementById('up-cnt').textContent='— '+rows.length+' found'+(fname?' in '+fname:'');
+  let h='';
+  rows.forEach((r,i)=>{
+    h+=`<div class="prow" id="pr-${i}">
+      <input type="checkbox" class="rchk" checked style="width:12px;height:12px;accent-color:var(--acc)" onchange="updSelCnt()">
+      <div>${r.date||'—'}</div>
+      <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc}">${r.desc||'—'}</div>
+      <div class="amt"> ${fmt(r.amount)}</div>
+      <div><button class="btn btn-d btn-xs" onclick="parsedRows.splice(${i},1);showParsed(parsedRows,'')">Del</button></div>
+    </div>`;
+  });
+  document.getElementById('up-plist').innerHTML=h;
+  document.getElementById('up-prev-sec').style.display='block';
+  document.getElementById('up-card-sec').style.display='block';
+  updSelCnt();
+  if(rows.length) hideUpWarn(); else showUpWarn('No transactions detected.','al-w');
+}
+
+function updSelCnt(){
+  const t=document.querySelectorAll('.rchk').length,s=document.querySelectorAll('.rchk:checked').length;
+  document.getElementById('sel-cnt').textContent=s+' / '+t+' selected';
+}
+function toggleAll(v){document.querySelectorAll('.rchk').forEach(c=>c.checked=v);updSelCnt();}
+function showUpWarn(m,cls){const w=document.getElementById('up-warn');w.className='alert '+cls;w.textContent=m;w.style.display='block';}
+function hideUpWarn(){document.getElementById('up-warn').style.display='none';}
+
+function confirmImport(){
+  const selCardId=parseInt(document.getElementById('up-card-sel').value)||null;
+  const manualCard=document.getElementById('up-card-manual').value.trim();
+  const upType=document.getElementById('up-type').value;
+  const upEmp=document.getElementById('up-emp').value.trim();
+  const upDept=document.getElementById('up-dept').value.trim();
+  const stmtMonth=document.getElementById('up-month').value;
+  const stmtYear=document.getElementById('up-year').value||new Date().getFullYear();
+  const stmtLabel=stmtYear+'-'+stmtMonth; // e.g. "2025-03"
+  const upDueDate=document.getElementById('up-due-date')?.value||null;
+
+  let finalCardId=selCardId;
+  if(!finalCardId && manualCard){
+    const newCard={id:cid++,num:manualCard,name:upEmp||upDept||manualCard,type:upType,employee:upEmp,dept:upDept,parentId:null};
+    CARDS.push(newCard);
+    finalCardId=newCard.id;
+    renderCardTree(); populateCardSelects();
+  }
+
+  // ── DUPLICATE CHECK: block if this card+month already uploaded ──
+  if(finalCardId && cardMonthExists(finalCardId, stmtLabel)){
+    const card=CARDS.find(c=>c.id===finalCardId);
+    const cardLabel=card?(card.employee||card.name||'****'+card.num):'Selected Card';
+    const mo=stmtLabel;
+    showUpWarn('⛔ Duplicate Upload Blocked! Card "'+cardLabel+'" already has data uploaded for '+mo+'. To re-upload, please delete the existing transactions from the Dashboard first.','al-w');
+    return;
+  }
+
+  const chks=document.querySelectorAll('.rchk');
+  let added=0;
+  parsedRows.forEach((r,i)=>{
+    if(chks[i]&&chks[i].checked){
+      const ci=getCardInfo(finalCardId);
+      TXN.push({
+        id:makeTxnId(finalCardId,stmtLabel),
+        date:r.date,merchant:r.desc,amount:r.amount,
+        cardType:finalCardId?ci.type:upType,
+        cardId:finalCardId,
+        employee:finalCardId?ci.employee:upEmp,
+        dept:finalCardId?ci.dept:upDept,
+        stmtMonth:stmtLabel,txnMonth:stmtLabel,
+        reviewed:false,rd:null
+      });
+      added++;
+    }
+  });
+  // Save due date for parent card of this upload
+  if(upDueDate && finalCardId){
+    const uploadedCard=CARDS.find(c=>c.id===finalCardId);
+    const parentId=uploadedCard?.parentId||finalCardId;
+    DUE_DATES[parentId+'|'+stmtLabel]=upDueDate;
+  }
+  refresh();
+  resetUp();
+  document.getElementById('up-due-date').value='';
+  ok(added+' Transactions Imported!','Check the dashboard.');
+}
+
+function resetUp(){
+  document.getElementById('up-card-sec').style.display='none';
+  document.getElementById('up-map-sec').style.display='none';
+  document.getElementById('up-prev-sec').style.display='none';
+  document.getElementById('fi').value='';
+  const pSel=document.getElementById('up-parent-sel');if(pSel)pSel.value='';
+  const cSel=document.getElementById('up-child-sel');if(cSel)cSel.innerHTML='<option value="">-- No Child Card --</option>';
+  const cWrap=document.getElementById('up-child-wrap');if(cWrap){cWrap.style.opacity='1';cWrap.style.pointerEvents='auto';}
+  const infoDiv=document.getElementById('up-card-info');if(infoDiv)infoDiv.style.display='none';
+  parsedRows=[]; sheetData=null;
+  hideUpWarn();
+}
+
+// ── EMPLOYEE SELF UPLOAD ──
+function handleEmpDrop(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleEmpFile(f);}
+function handleEmpFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  const r=new FileReader();
+  r.onload=e=>{
+    let data;
+    if(ext==='csv') data=e.target.result.split('\n').map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));
+    else { const wb=XLSX.read(e.target.result,{type:'array'});data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});}
+    processEmpUpload(data);
+  };
+  if(ext==='csv') r.readAsText(file); else r.readAsArrayBuffer(file);
+}
+
+function processEmpUpload(data){
+  if(!data||data.length<2){document.getElementById('emp-up-result').innerHTML='<div class="alert al-w">File is empty or invalid.</div>';return;}
+  const hdrs=data[0].map(h=>String(h).toLowerCase().trim());
+  // Match column: TXN_ID preferred (new exports), fallback to id/sno (old files)
+  const txnIdI=hdrs.findIndex(h=>h==='txn_id'||h==='txnid'||h==='txn id');
+  const idI=txnIdI>=0?txnIdI:hdrs.findIndex(h=>h.includes('id')||h==='sno'||h==='s.no');
+  const storeI=hdrs.findIndex(h=>h.includes('store'));
+  const marketI=hdrs.findIndex(h=>h.includes('market'));
+  const locationI=hdrs.findIndex(h=>h.includes('location'));
+  const uidsI=hdrs.findIndex(h=>h.includes('uid'));
+  const txnMonthI=hdrs.findIndex(h=>h.includes('transaction month')||h.includes('txn month')||h.includes('txnmonth'));
+  const personI=hdrs.findIndex(h=>h.includes('person')||h.includes('performed')||h.includes('banda')||h.includes('karne'));
+  const invI=hdrs.findIndex(h=>h.includes('invoice'));
+  const coaI=hdrs.findIndex(h=>h.includes('coa')||h.includes('chart')||h.includes('account'));
+  const cmtI=hdrs.findIndex(h=>h.includes('comment')||h.includes('note'));
+  const ax0I=hdrs.findIndex(h=>h.includes('invoice bani')||h.includes('ax: invoice')||h.includes('invoice created')||(AX[0]&&h.includes(AX[0].toLowerCase())));
+  const ax1I=hdrs.findIndex(h=>h.includes('payment bani')||h.includes('ax: payment')||h.includes('payment created')||(AX[1]&&h.includes(AX[1].toLowerCase())));
+  const ax2I=hdrs.findIndex(h=>h.includes('journal')||(AX[2]&&h.includes(AX[2].toLowerCase())));
+  const ax3I=hdrs.findIndex(h=>(AX[3]&&h.includes(AX[3].toLowerCase())));
+
+  let updated=0, skipped=0;
+  data.slice(1).forEach(row=>{
+    const txnIdRaw=idI>=0?String(row[idI]||'').trim():null;
+    if(!txnIdRaw) return;
+    // IDs can be string ("25000-202503-00001") or legacy numeric
+    const txnId=isNaN(txnIdRaw)?txnIdRaw:parseInt(txnIdRaw);
+    const t=TXN.find(x=>String(x.id)===String(txnId));
+    if(!t){skipped++;return;}
+    if(!t.rd) t.rd={};
+    if(storeI>=0&&row[storeI]) t.rd.store=String(row[storeI]);
+    if(marketI>=0&&row[marketI]) t.rd.market=String(row[marketI]);
+    if(locationI>=0&&row[locationI]) t.rd.location=String(row[locationI]);
+    if(uidsI>=0&&row[uidsI]) t.rd.uids=String(row[uidsI]);
+    if(txnMonthI>=0&&row[txnMonthI]) t.txnMonth=String(row[txnMonthI]);
+    if(personI>=0&&row[personI]) t.rd.person=String(row[personI]);
+    if(invI>=0&&row[invI]) t.rd.invoice=String(row[invI]);
+    if(coaI>=0&&row[coaI]) t.rd.coa=String(row[coaI]);
+    if(cmtI>=0&&row[cmtI]) t.rd.comments=String(row[cmtI]);
+    if(ax0I>=0) t.rd.ax0=String(row[ax0I]).toLowerCase()==='yes'||row[ax0I]===true||row[ax0I]==='TRUE';
+    if(ax1I>=0) t.rd.ax1=String(row[ax1I]).toLowerCase()==='yes'||row[ax1I]===true||row[ax1I]==='TRUE';
+    if(ax2I>=0) t.rd.ax2=String(row[ax2I]).toLowerCase()==='yes'||row[ax2I]===true||row[ax2I]==='TRUE';
+    if(ax3I>=0) t.rd.ax3=String(row[ax3I]).toLowerCase()==='yes'||row[ax3I]===true||row[ax3I]==='TRUE';
+    if(t.rd.store||t.rd.market||t.rd.person||t.rd.invoice||t.rd.coa) t.reviewed=true;
+    updated++;
+  });
+  refresh();
+  const skipMsg=skipped>0?` (${skipped} rows skipped — TXN_ID not found, check filter/card match)`:'';
+  document.getElementById('emp-up-result').innerHTML=`<div class="alert al-ok">${updated} transactions updated successfully!${skipMsg}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════════════
+function renderDash(){
+  const fType=document.getElementById('f-type')?.value||'';
+  const fStatus=document.getElementById('f-status')?.value||'';
+  const fQ=(document.getElementById('f-q')?.value||'').toLowerCase();
+  let rows=TXN.filter(t=>{
+    if(fType&&t.cardType!==fType)return false;
+    if(fStatus==='pending'&&t.reviewed)return false;
+    if(fStatus==='reviewed'&&!t.reviewed)return false;
+    if(fQ&&!((t.merchant||'').toLowerCase().includes(fQ)||(t.employee||'').toLowerCase().includes(fQ)||(t.dept||'').toLowerCase().includes(fQ)))return false;
+    return true;
+  });
+  const c=document.getElementById('dash-table');
+  if(!rows.length){c.innerHTML='<div class="empty">No transactions.</div>';return;}
+  const ci=r=>getCardInfo(r.cardId);
+  let h=`<div class="tbl-w"><table class="tbl"><thead><tr>
+    <th>#</th><th>Date</th><th>Merchant</th><th>Amount</th><th>Type</th>
+    <th>Parent Card</th><th>Child Card</th><th>Employee/Dept</th>
+    <th>Month</th><th>Market</th><th>Location</th><th>UIDs</th><th>COA</th><th>AX</th><th>Status</th><th></th>
+  </tr></thead><tbody>`;
+  rows.forEach((t,i)=>{
+    const info=ci(t);
+    const rd=t.rd||{};
+    const axCount=AX.filter((l,j)=>l&&rd['ax'+j]).length;
+    h+=`<tr>
+      <td style="color:var(--t3)">${i+1}</td>
+      <td>${t.date||'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.merchant||'—'}</td>
+      <td class="amt">${fmt(t.amount)}</td>
+      <td>${t.cardType==='personal'?'<span class="bdg bdg-p">Personal</span>':'<span class="bdg bdg-s">Shared</span>'}</td>
+      <td>****${info.parentNum||'—'}</td>
+      <td>${info.childNum?'****'+info.childNum:'—'}</td>
+      <td>${t.cardType==='personal'?(t.employee||'—'):(t.dept||'—')}</td>
+      <td style="font-size:10px;color:var(--acc2);font-family:var(--mono)">${(()=>{const m=t.txnMonth||t.stmtMonth||'';if(!m)return '—';const [yr,mo]=m.split('-');const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return mn[(parseInt(mo)||1)-1]+' '+yr;})()}</td>
+      <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rd.market||rd.store||'—'}</td>
+      <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rd.location||'—'}</td>
+      <td style="font-family:var(--mono);font-size:10px">${rd.uids||'—'}</td>
+      <td style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${rd.coa||'—'}</td>
+      <td>${(()=>{const rd=t.rd||{};const checked=AX.map((l,j)=>l&&rd['ax'+j]?l:'').filter(Boolean);return checked.length?'<span style="color:var(--ok);font-size:10px">'+checked.length+'/'+AX.filter(Boolean).length+'</span>':'<span style="color:var(--t3);font-size:10px">—</span>';})()}</td>
+      <td>${t.reviewed?'<span class="bdg bdg-ok">Done</span>':'<span class="bdg bdg-w">Pending</span>'}</td>
+      <td><button class="btn btn-d btn-xs" onclick="TXN=TXN.filter(x=>String(x.id)!==String('${t.id}'));refresh()">Del</button></td>
+    </tr>`;
+  });
+  h+='</tbody></table></div>';
+  c.innerHTML=h;
+}
+
+function renderCardProgress(){
+  const cards=CARDS.length?CARDS:[...new Set(TXN.map(t=>t.cardId))].map(id=>({id,num:id||'Unknown',name:'',type:'personal',employee:'',dept:''}));
+  let h='';
+  cards.forEach(card=>{
+    const txns=TXN.filter(t=>t.cardId===card.id);
+    if(!txns.length)return;
+    const done=txns.filter(t=>t.reviewed).length;
+    const pct=Math.round((done/txns.length)*100);
+    const info=getCardInfo(card.id);
+    const label=info.childNum?`****${info.parentNum} → ****${info.childNum} (${card.employee||card.dept||'—'})`:
+                `****${info.parentNum||card.num} — ${card.name||card.employee||card.dept||'—'}`;
+    h+=`<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="font-family:var(--mono)">${label}</span>
+        <span style="color:var(--t2);font-family:var(--mono)">${done}/${txns.length} · ${pct}%</span>
+      </div>
+      <div class="prog-w"><div class="prog-b" style="width:${pct}%"></div></div>
+    </div>`;
+  });
+  document.getElementById('card-progress').innerHTML=h||'<div class="empty">No cards with transactions.</div>';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// REVIEW (SERIAL / CARD-WISE GROUPED)
+// ══════════════════════════════════════════════════════════════════════
+function populateReviewFilter(){
+  const sel=document.getElementById('rv-card-filter');
+  if(!sel)return;
+  const opts='<option value="">All Cards</option>'+CARDS.map(c=>{
+    const info=getCardInfo(c.id);
+    const label=info.childNum?`****${info.parentNum}→****${info.childNum} (${c.employee||c.dept||'—'})`:
+                `****${info.parentNum} — ${c.name||c.employee||c.dept||'—'}`;
+    return `<option value="${c.id}">${label}</option>`;
+  }).join('');
+  sel.innerHTML=opts;
+  populateMonthFilters();
+}
+
+function renderReview(){
+  const monthFilter=document.getElementById('rv-month-filter')?.value||'';
+  const cardFilter=document.getElementById('rv-card-filter')?.value;
+  const statusFilter=document.getElementById('rv-status-filter')?.value;
+  let txns=TXN.filter(t=>{
+    if(monthFilter && (t.stmtMonth||'')!==monthFilter) return false;
+    if(cardFilter&&String(t.cardId)!==cardFilter)return false;
+    if(statusFilter==='pending'&&t.reviewed)return false;
+    if(statusFilter==='reviewed'&&!t.reviewed)return false;
+    return true;
+  });
+  if(!txns.length){document.getElementById('review-container').innerHTML='<div class="empty">No transactions found.</div>';return;}
+
+  // Group by cardId
+  const groups={};
+  txns.forEach(t=>{
+    const key=t.cardId||'unknown';
+    if(!groups[key])groups[key]=[];
+    groups[key].push(t);
+  });
+
+  let html='';
+  Object.entries(groups).forEach(([cardKey,group])=>{
+    const cardId=parseInt(cardKey);
+    const info=getCardInfo(cardId);
+    const card=CARDS.find(c=>c.id===cardId);
+    const done=group.filter(t=>t.reviewed).length;
+    const total=group.reduce((a,t)=>a+(+t.amount||0),0);
+    const cardLabel=info.childNum?
+      `****${info.parentNum} → ****${info.childNum} · ${info.employee||info.dept||'—'}`:
+      `****${info.parentNum||cardKey} · ${card?.name||info.employee||info.dept||'—'}`;
+    const typeBdg=info.type==='personal'?'<span class="bdg bdg-p">Personal</span>':'<span class="bdg bdg-s">Shared</span>';
+
+    const monthLabel=group[0]?.stmtMonth?` <span style="font-size:9px;padding:2px 6px;border-radius:10px;background:rgba(168,255,96,.12);color:var(--acc);font-family:var(--mono)">${group[0].stmtMonth}</span>`:'';
+    html+=`<div class="card-group" id="cg-${cardKey}">
+      <div class="cg-header" onclick="toggleGroup('${cardKey}')">
+        <div class="cg-title">
+          ${typeBdg}
+          <span>${cardLabel}</span>
+          ${monthLabel}
+          <span style="color:var(--t2);font-weight:400;font-size:10px">${done}/${group.length} done · ${fmt(total)}</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="prog-w" style="width:80px"><div class="prog-b" style="width:${Math.round(done/group.length*100)}%"></div></div>
+          <span class="cg-meta" id="cg-arr-${cardKey}">▶</span>
+        </div>
+      </div>
+      <div class="cg-body" id="cgb-${cardKey}">`;
+
+    group.forEach((t,idx)=>{
+      const rd=t.rd||{};
+      const isDone=t.reviewed;
+      const isShared=t.cardType==='shared';
+      const isMine=rd.own==='mine';
+      const showFields=!isShared||isMine;
+
+      html+=`<div class="rrow ${isDone?'rrow-done':''}" id="rr-${t.id}">
+        <div class="rrow-top">
+          <div class="rrow-serial">${idx+1}</div>
+          <div class="rrow-info">
+            <div class="rrow-merchant">${t.merchant||'—'}</div>
+            <div class="rrow-meta">${t.date||'—'}${isDone?' · <span style="color:var(--ok)">✓ reviewed</span>':''}</div>
+          </div>
+          <div class="rrow-amt"> ${fmt(t.amount)}</div>
+          ${isDone && !ADMIN_MODE
+            ? `<div class="rrow-expand" style="color:var(--t3);cursor:default;border:1px solid var(--b1)" title="Only admin can edit reviewed transactions">🔒 Reviewed</div>`
+            : `<div class="rrow-expand" onclick="toggleRow('${t.id}')" id="re-${t.id}">${isDone?'✓ Edit (Admin)':'Fill ▼'}</div>`
+          }
+        </div>
+        <div class="rrow-fields" id="rf-${t.id}" ${isDone?'':'style="display:none"'}>`;
+
+      if(isShared){
+        html+=`<div class="own-row">
+          <div class="own-btn ${isMine?'own-mine':''}" onclick="setOwn('${t.id}','mine',this)">This is mine</div>
+          <div class="own-btn ${rd.own==='not'?'own-not':''}" onclick="setOwn('${t.id}','not',this)">Not mine</div>
+        </div>
+        <div id="of-${t.id}" style="display:${showFields?'block':'none'}">`;
+      }
+
+      html+=`<div class="fr c4" style="margin-bottom:8px">
+        <div class="fg"><label>Market</label><input type="text" id="f-market-${t.id}" value="${rd.market||rd.store||''}" placeholder="e.g. Arizona LLC"></div>
+        <div class="fg"><label>Location</label><input type="text" id="f-location-${t.id}" value="${rd.location||''}" placeholder="e.g. Oracle (Relo)"></div>
+        <div class="fg"><label>UIDs</label><input type="text" id="f-uids-${t.id}" value="${rd.uids||''}" placeholder="e.g. 70164808"></div>
+        <div class="fg"><label>Performed By</label><input type="text" id="f-person-${t.id}" value="${rd.person||''}" placeholder="Person name"></div>
+      </div>
+      <div class="fr c3" style="margin-bottom:8px">
+        <div class="fg"><label>Invoice Number</label><input type="text" id="f-inv-${t.id}" value="${rd.invoice||''}" placeholder="INV-001 (if available)"></div>
+        <div class="fg"><label>Transaction Month</label><select id="f-txnmonth-${t.id}" style="width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:7px;padding:7px 10px;color:var(--t1);font-size:12px;font-family:var(--mono)">
+          <option value="">-- Select Month --</option>
+          ${['January','February','March','April','May','June','July','August','September','October','November','December'].map((mn,mi)=>{const mv=String(mi+1).padStart(2,'0');const yr=t.stmtMonth?t.stmtMonth.split('-')[0]:new Date().getFullYear();const val=yr+'-'+mv;return '<option value="'+val+'" '+(t.txnMonth===val?'selected':'')+'>'+(t.stmtMonth?t.stmtMonth.split('-')[0]:yr)+' — '+mn+'</option>';}).join('')}
+        </select></div>
+        <div class="fg"><label>Comments</label><input type="text" id="f-cmt-${t.id}" value="${rd.comments||''}" placeholder="Note..."></div>
+      </div>
+      <div class="fr c2" style="margin-bottom:8px">
+        <div class="fg" style="position:relative">
+          <label>Chart of Account</label>
+          <input type="text" id="f-coa-${t.id}"
+            value="${rd.coa||''}"
+            placeholder="Search COA... (code or name)"
+            autocomplete="off"
+            style="width:100%"
+            oninput="showCoaDropdown(this,'${t.id}')"
+            onfocus="showCoaDropdown(this,'${t.id}')"
+            onkeydown="coaKeyNav(event,'${t.id}')">
+          <div id="coa-dd-${t.id}" style="display:none;position:absolute;z-index:100;width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:7px;max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.4);top:calc(100% + 2px);left:0"></div>
+        </div>
+        <div class="fg"><label>AX Dynamics Posting</label>
+          <div class="cbrow" style="margin-top:6px">
+            ${AX.map((lbl,i)=>lbl?`<label class="cbi"><input type="checkbox" id="f-ax${i}-${t.id}" ${rd['ax'+i]?'checked':''}> ${lbl}</label>`:'').join('')}
+          </div>
+        </div>
+      </div>
+      <div class="brow">
+        <button class="btn btn-p btn-xs" onclick="saveRow('${t.id}')">Save</button>
+        <button class="btn btn-s btn-xs" onclick="toggleRow('${t.id}')">Collapse</button>
+      </div>`;
+
+      if(isShared) html+=`</div>`; // close of-div
+      html+=`</div></div>`; // close rrow-fields, rrow
+    });
+
+    html+=`</div></div>`; // close cg-body, card-group
+  });
+
+  document.getElementById('review-container').innerHTML=html;
+}
+
+function toggleGroup(key){
+  const body=document.getElementById('cgb-'+key);
+  const arr=document.getElementById('cg-arr-'+key);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arr) arr.textContent=isOpen?'▶':'▼';
+}
+function expandAll(){document.querySelectorAll('.cg-body').forEach(b=>{b.classList.add('open');});document.querySelectorAll('[id^="cg-arr-"]').forEach(a=>a.textContent='▼');}
+function collapseAll(){document.querySelectorAll('.cg-body').forEach(b=>b.classList.remove('open'));document.querySelectorAll('[id^="cg-arr-"]').forEach(a=>a.textContent='▶');}
+
+function toggleRow(id){
+  const f=document.getElementById('rf-'+id);
+  if(!f) return;
+  const btn=document.getElementById('re-'+id);
+  const isOpen=f.classList.contains('open');
+  if(!isOpen){
+    f.style.display='block'; f.classList.add('open');
+    if(btn) btn.textContent='▲ Collapse';
+  } else {
+    f.style.display='none'; f.classList.remove('open');
+    if(btn) btn.textContent='Fill ▼';
+  }
+}
+
+function setOwn(id,val,el){
+  const row=document.getElementById('rr-'+id);
+  if(row) row.querySelectorAll('.own-btn').forEach(b=>b.classList.remove('own-mine','own-not'));
+  el.classList.add(val==='mine'?'own-mine':'own-not');
+  const of=document.getElementById('of-'+id);
+  if(of) of.style.display=val==='mine'?'block':'none';
+  const t=TXN.find(x=>String(x.id)===String(id));
+  if(t){if(!t.rd)t.rd={};t.rd.own=val;}
+}
+
+function saveRow(id){
+  const t=TXN.find(x=>String(x.id)===String(id));
+  if(!t)return;
+  // Block non-admin from editing reviewed transactions
+  if(t.reviewed && !ADMIN_MODE){
+    alert('This transaction is reviewed. Only admin can edit it.');
+    return;
+  }
+  if(!t.rd)t.rd={};
+  t.rd.market=document.getElementById(`f-market-${id}`)?.value||'';
+  t.rd.location=document.getElementById(`f-location-${id}`)?.value||'';
+  t.rd.uids=document.getElementById(`f-uids-${id}`)?.value||'';
+  t.rd.person=document.getElementById(`f-person-${id}`)?.value||'';
+  t.rd.invoice=document.getElementById(`f-inv-${id}`)?.value||'';
+  t.rd.coa=document.getElementById('f-coa-'+id)?.value||''; closeCoaDropdown(id);
+  t.rd.comments=document.getElementById(`f-cmt-${id}`)?.value||'';
+  const txnMonthEl=document.getElementById(`f-txnmonth-${id}`);
+  if(txnMonthEl&&txnMonthEl.value) t.txnMonth=txnMonthEl.value;
+  AX.forEach((lbl,i)=>{if(lbl)t.rd['ax'+i]=document.getElementById(`f-ax${i}-${id}`)?.checked||false;});
+  if(t.cardType==='shared'&&t.rd.own==='mine') t.reviewed=true;
+  else if(t.cardType==='personal'&&(t.rd.market||t.rd.person||t.rd.coa)) t.reviewed=true;
+  // Update row visually
+  const rr=document.getElementById('rr-'+String(id));
+  if(rr) rr.classList.toggle('rrow-done',t.reviewed);
+  const re=document.getElementById('re-'+String(id));
+  if(re&&t.reviewed) re.textContent=ADMIN_MODE?'✓ Edit (Admin)':'✓ reviewed';
+  const meta=rr?.querySelector('.rrow-meta');
+  if(meta&&t.reviewed) meta.innerHTML=(t.date||'—')+' · <span style="color:var(--ok)">✓ reviewed</span>';
+  refresh();
+}
+
+function saveAllReviews(){
+  TXN.forEach(t=>{
+    const storeEl=document.getElementById(`f-market-${t.id}`)||document.getElementById(`f-store-${t.id}`);
+    if(!storeEl)return;
+    saveRow(t.id);
+  });
+  ok('All Saved!','All visible transactions have been saved.');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// LINKS MODAL
+// ══════════════════════════════════════════════════════════════════════
+function openLinksModal(){
+  let h='';
+  const grouped={};
+  TXN.forEach(t=>{const k=t.cardId||'u';if(!grouped[k])grouped[k]=[];grouped[k].push(t);});
+  if(!Object.keys(grouped).length){h='<div class="empty">Add transactions first.</div>';}
+  else{
+    Object.entries(grouped).forEach(([cKey,txns])=>{
+      const card=CARDS.find(c=>c.id===parseInt(cKey));
+      const info=getCardInfo(parseInt(cKey));
+      const done=txns.filter(t=>t.reviewed).length;
+      const label=info.childNum?`****${info.parentNum}→****${info.childNum} · ${info.employee||info.dept||'—'}`:`****${info.parentNum||cKey} · ${card?.name||info.employee||info.dept||'—'}`;
+      const url=`${location.href.split('?')[0]}?card=${cKey}`;
+      h+=`<div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:5px">${label}
+          <span style="color:var(--t2);font-weight:400;font-size:10px;font-family:var(--mono)">${txns.length} txns · ${done} reviewed</span>
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--b1);border-radius:6px;display:flex;align-items:center;gap:8px;padding:6px 10px;font-family:var(--mono);font-size:10px">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)">${url}</span>
+          <span style="cursor:pointer;color:var(--acc)" onclick="navigator.clipboard.writeText('${url}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</span>
+        </div>
+        <button class="btn btn-s btn-xs" style="margin-top:5px" onclick="filterReviewByCard('${cKey}')">Preview Review</button>
+      </div>`;
+    });
+  }
+  document.getElementById('links-body').innerHTML=h;
+  document.getElementById('m-links').classList.add('on');
+}
+
+function filterReviewByCard(cKey){
+  cm();
+  document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ntab')[3].classList.add('on'); // Review tab
+  gv('review',null);
+  setTimeout(()=>{
+    const sel=document.getElementById('rv-card-filter');
+    if(sel){sel.value=cKey;renderReview();}
+  },100);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// REPORT
+// ══════════════════════════════════════════════════════════════════════
+function getFilteredTXN(){
+  const rfMonth=document.getElementById('rf-month')?.value||'';
+  const rfCard=document.getElementById('rf-card')?.value||'';
+  const rfType=document.getElementById('rf-type')?.value||'';
+  const rfStatus=document.getElementById('rf-status')?.value||'';
+  const rfDesc=(document.getElementById('rf-desc')?.value||'').toLowerCase();
+  const rfWho=(document.getElementById('rf-who')?.value||'').toLowerCase();
+  const rfCOA=(document.getElementById('rf-coa')?.value||'').toLowerCase();
+  const rfAMin=parseFloat(document.getElementById('rf-amt-min')?.value||'0')||0;
+  const rfAMax=parseFloat(document.getElementById('rf-amt-max')?.value||'')||Infinity;
+  const rfDFrom=document.getElementById('rf-date-from')?.value||'';
+  const rfDTo=document.getElementById('rf-date-to')?.value||'';
+  return TXN.filter(t=>{
+    if(rfMonth && (t.stmtMonth||'')!==rfMonth) return false;
+    if(rfCard && String(t.cardId)!==rfCard) return false;
+    if(rfType && t.cardType!==rfType) return false;
+    if(rfStatus==='reviewed' && !t.reviewed) return false;
+    if(rfStatus==='pending' && t.reviewed) return false;
+    if(rfDesc && !(t.merchant||'').toLowerCase().includes(rfDesc)) return false;
+    if(rfWho && !((t.employee||'').toLowerCase().includes(rfWho)||(t.dept||'').toLowerCase().includes(rfWho))) return false;
+    if(rfCOA && !((t.rd?.coa||'').toLowerCase().includes(rfCOA))) return false;
+    const amt=parseFloat(t.amount)||0;
+    if(amt<rfAMin || amt>rfAMax) return false;
+    if(rfDFrom && t.date && t.date<rfDFrom) return false;
+    if(rfDTo && t.date && t.date>rfDTo) return false;
+    return true;
+  });
+}
+
+function clearReportFilters(){
+  ['rf-month','rf-card','rf-type','rf-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['rf-desc','rf-who','rf-coa','rf-amt-min','rf-amt-max','rf-date-from','rf-date-to'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderReportTable();
+}
+
+function populateMonthFilters(){
+  const months=[...new Set(TXN.map(t=>t.stmtMonth).filter(Boolean))].sort();
+  const monthNames={
+    '01':'January','02':'February','03':'March','04':'April',
+    '05':'May','06':'June','07':'July','08':'August',
+    '09':'September','10':'October','11':'November','12':'December'
+  };
+  const opts='<option value="">All Months</option>'+months.map(m=>{
+    const [yr,mo]=m.split('-');
+    return `<option value="${m}">${monthNames[mo]||mo} ${yr}</option>`;
+  }).join('');
+  ['rf-month','rv-month-filter'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=opts;
+  });
+}
+
+function populateReportCardFilter(){
+  const sel=document.getElementById('rf-card');
+  if(!sel)return;
+  const opts='<option value="">All Cards</option>'+CARDS.map(c=>{
+    const info=getCardInfo(c.id);
+    const lbl=info.childNum?`****${info.parentNum}→****${info.childNum} (${c.employee||c.dept||'—'})`:
+              `****${info.parentNum} — ${c.name||c.employee||c.dept||'—'}`;
+    return `<option value="${c.id}">${lbl}</option>`;
+  }).join('');
+  sel.innerHTML=opts;
+  populateMonthFilters();
+}
+
+function renderReportStats(){
+  const rows=getFilteredTXN();
+  const tot=rows.length, rev=rows.filter(t=>t.reviewed).length;
+  const amt=rows.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+  document.getElementById('r-t').textContent=tot+(TXN.length!==tot?' / '+TXN.length:'');
+  document.getElementById('r-r').textContent=rev;
+  document.getElementById('r-p').textContent=tot-rev;
+  document.getElementById('r-a').textContent=fmt(amt);
+}
+
+function renderReportFields(){
+  const html=ALLFIELDS.map(f=>{
+    const on=selectedFields.includes(f.key);
+    return `<div class="fsel-item ${on?'on':''}" onclick="toggleField('${f.key}',this)">
+      <input type="checkbox" ${on?'checked':''} style="width:12px;height:12px;accent-color:var(--acc);pointer-events:none">
+      <span>${f.label}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('field-selector').innerHTML=html;
+}
+
+function toggleField(key,el){
+  if(selectedFields.includes(key)) selectedFields=selectedFields.filter(k=>k!==key);
+  else selectedFields.push(key);
+  el.classList.toggle('on');
+  el.querySelector('input').checked=selectedFields.includes(key);
+}
+
+function selAllFields(v){
+  selectedFields=v?ALLFIELDS.map(f=>f.key):[];
+  renderReportFields();
+}
+
+function getFieldVal(t,key){
+  const rd=t.rd||{};
+  const info=getCardInfo(t.cardId);
+  switch(key){
+    case 'stmtMonth': return t.stmtMonth||'';
+    case 'txnMonth': return t.txnMonth||t.stmtMonth||'';
+    case 'date': return t.date||'';
+    case 'merchant': return t.merchant||'';
+    case 'amount': return parseFloat(t.amount)||0;
+    case 'cardType': return t.cardType==='personal'?'Personal':'Shared';
+    case 'parentCard': return info.parentNum?'****'+info.parentNum:'';
+    case 'childCard': return info.childNum?'****'+info.childNum:'';
+    case 'employee': return t.employee||'';
+    case 'dept': return t.dept||'';
+    case 'market': return rd.market||rd.store||'';
+    case 'location': return rd.location||'';
+    case 'uids': return rd.uids||'';
+    case 'person': return rd.person||'';
+    case 'invoice': return rd.invoice||'';
+    case 'coa': return rd.coa||'';
+    case 'comments': return rd.comments||'';
+    case 'ax0': return rd.ax0?'Yes':'No';
+    case 'ax1': return rd.ax1?'Yes':'No';
+    case 'ax2': return rd.ax2?'Yes':'No';
+    case 'ax3': return rd.ax3?'Yes':'No';
+    case 'status': return t.reviewed?'Reviewed':'Pending';
+    default: return '';
+  }
+}
+
+function renderReportTable(){
+  renderReportStats();
+  const rows=getFilteredTXN();
+  if(!rows.length){document.getElementById('report-tbl').innerHTML='<div class="empty">No transactions found (or no results for current filters).</div>';return;}
+  const fields=ALLFIELDS.filter(f=>selectedFields.includes(f.key));
+  let h=`<div class="tbl-w"><table class="tbl"><thead><tr>`;
+  fields.forEach(f=>h+=`<th>${f.label}</th>`);
+  h+=`</tr></thead><tbody>`;
+  rows.forEach((t,i)=>{
+    h+=`<tr>`;
+    fields.forEach(f=>{
+      let v=f.key==='sno'?(i+1):getFieldVal(t,f.key);
+      if(f.key==='amount') v=`<span class="amt">${fmt(v)}</span>`;
+      else if(f.key==='status') v=t.reviewed?'<span class="bdg bdg-ok">Reviewed</span>':'<span class="bdg bdg-w">Pending</span>';
+      else if(f.key==='cardType') v=t.cardType==='personal'?'<span class="bdg bdg-p">Personal</span>':'<span class="bdg bdg-s">Shared</span>';
+      else if(['ax0','ax1','ax2','ax3'].includes(f.key)) v=(t.rd||{})[f.key]?'<span style="color:var(--ok)">✓</span>':'—';
+      h+=`<td>${v||'—'}</td>`;
+    });
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('report-tbl').innerHTML=h;
+}
+
+function getExportData(){
+  const fields=ALLFIELDS.filter(f=>selectedFields.includes(f.key));
+  // Always prepend TXN_ID column (used for re-import matching) — hidden from display but present in file
+  const headers=['TXN_ID',...fields.map(f=>f.label)];
+  const rows=getFilteredTXN().map((t,i)=>[t.id,...fields.map(f=>f.key==='sno'?(i+1):getFieldVal(t,f.key))]);
+  return {headers,rows};
+}
+
+function exportCSV(){
+  const {headers,rows}=getExportData();
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  dl(new Blob([csv],{type:'text/csv'}),'expense-'+ym()+'.csv');
+}
+
+function exportExcel(){
+  const {headers,rows}=getExportData();
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Expense Report');
+  XLSX.writeFile(wb,'expense-'+ym()+'.xlsx');
+}
+
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function ym(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+
+// ══════════════════════════════════════════════════════════════════════
+// TRANSACTION TEMPLATE DOWNLOAD
+// ══════════════════════════════════════════════════════════════════════
+function downloadTxnTemplate(){
+  const headers=['Month','Parent Card Name','Child Card NAME','DATE','DESCRIPTION','AMOUNT','Market','Location','UIDs'];
+  const now=new Date();
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+  const yr=String(now.getFullYear()).slice(-2);
+  const sample=[
+    [mo+'-'+yr,'AMEX YM- 21009','YOUSUF MEGHANI - 25000','02/03/26','COMPUTACENTER US WESTWOOD MA +18002288324','$ 1,034.80','Arizona LLC','Oracle (Relo)','70164808'],
+    [mo+'-'+yr,'AMEX YM- 21009','YOUSUF MEGHANI - 25000','03/03/26','PXY 1 AFFORDABLE BACKFLOW SAN ANTONIO TX','$ 570.42','','',''],
+    [mo+'-'+yr,'AMEX YM- 21009','JUSTIN FERGUSON - 21066','03/03/26','ANTHONY JRS ITALIAN RESTA','$ 18.28','','',''],
+    [mo+'-'+yr,'AMEX YM- 21009','MARC RIVERA - 24110','03/03/26','LOWES DALLAS TX 972-228-2880','$ 115.39','','',''],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);
+  ws['!cols']=[{wch:10},{wch:20},{wch:24},{wch:10},{wch:40},{wch:12},{wch:16},{wch:16},{wch:12}];
+  // Style header row
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Transactions');
+  XLSX.writeFile(wb,'transaction_upload_template.xlsx');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CARD BULK UPLOAD
+// ══════════════════════════════════════════════════════════════════════
+function cardTab(tab, el){
+  document.querySelectorAll('.itab').forEach(t=>t.classList.remove('on'));
+  if(el) el.classList.add('on');
+  document.getElementById('ctab-manual').style.display=tab==='manual'?'block':'none';
+  document.getElementById('ctab-bulk').style.display=tab==='bulk'?'block':'none';
+}
+
+function downloadCardTemplate(){
+  const headers=['Parent Card Number','Parent Card Name','Department','Child Card Number','Employee Name'];
+  const sample=[
+    ['21009','AMEX YM','Operations','25000','Yousuf Meghani'],
+    ['21009','AMEX YM','Operations','21066','Justin Ferguson'],
+    ['21009','AMEX YM','Operations','24110','Marc Rivera'],
+    ['55678','VISA Corp','Finance','',''],
+    ['55678','VISA Corp','Finance','33201','Ahmed Khan'],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...sample]);
+  ws['!cols']=[{wch:20},{wch:18},{wch:14},{wch:20},{wch:20}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Cards');
+  XLSX.writeFile(wb,'card_upload_template.xlsx');
+}
+
+let _cardSheetData=null;
+
+function handleCardDrop(e){
+  e.preventDefault();
+  document.getElementById('card-dz').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f) handleCardFile(f);
+}
+
+function handleCardFile(file){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const r=new FileReader();
+  r.onload=e=>{
+    let data;
+    if(ext==='csv'){
+      data=e.target.result.split('\n').map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));
+    } else {
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+    }
+    processCardSheet(data, file.name);
+  };
+  if(ext==='csv') r.readAsText(file); else r.readAsArrayBuffer(file);
+}
+
+function processCardSheet(data, fname){
+  if(!data||data.length<2){alert('File empty or invalid.');return;}
+  const hdrs=data[0].map(h=>String(h).toLowerCase().trim());
+  _cardSheetData=data.slice(1);
+
+  // Auto-detect columns
+  const pNumI=hdrs.findIndex(h=>h.includes('parent')&&(h.includes('num')||h.includes('card')||h.includes('no')));
+  const pNameI=hdrs.findIndex(h=>h.includes('parent')&&h.includes('name'));
+  const deptI=hdrs.findIndex(h=>h.includes('dept')||h.includes('department'));
+  const cNumI=hdrs.findIndex(h=>h.includes('child')&&(h.includes('num')||h.includes('card')||h.includes('no')));
+  const cEmpI=hdrs.findIndex(h=>h.includes('employee')||h.includes('emp')||h.includes('cardholder')||h.includes('name')&&!h.includes('parent'));
+
+  const noOpt='<option value="-1">-- Skip --</option>';
+  const opts=hdrs.map((h,i)=>`<option value="${i}">${h||(i+1)}</option>`).join('');
+  document.getElementById('card-map-fields').innerHTML=`
+    <div class="fg"><label>Parent Card Number</label><select id="cm-pnum">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Parent Card Name</label><select id="cm-pname">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Department (optional)</label><select id="cm-dept">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Child Card Number (optional)</label><select id="cm-cnum">${noOpt}${opts}</select></div>
+    <div class="fg"><label>Employee Name (optional)</label><select id="cm-cemp">${noOpt}${opts}</select></div>`;
+  if(pNumI>=0) document.getElementById('cm-pnum').value=pNumI;
+  if(pNameI>=0) document.getElementById('cm-pname').value=pNameI;
+  if(deptI>=0) document.getElementById('cm-dept').value=deptI;
+  if(cNumI>=0) document.getElementById('cm-cnum').value=cNumI;
+  if(cEmpI>=0) document.getElementById('cm-cemp').value=cEmpI;
+  document.getElementById('card-file-info').textContent=fname+' — '+_cardSheetData.length+' rows, '+hdrs.length+' columns';
+  document.getElementById('card-map-sec').style.display='block';
+  document.getElementById('card-prev-sec').style.display='none';
+}
+
+function previewCardUpload(){
+  const pNumI=parseInt(document.getElementById('cm-pnum').value);
+  const pNameI=parseInt(document.getElementById('cm-pname').value);
+  const deptI=parseInt(document.getElementById('cm-dept').value);
+  const cNumI=parseInt(document.getElementById('cm-cnum').value);
+  const cEmpI=parseInt(document.getElementById('cm-cemp').value);
+
+  if(pNumI<0){alert('Parent Card Number column is required.');return;}
+
+  // Parse rows into unique card entries
+  const parentMap=new Map(); // parentKey => {num, name, dept}
+  const childList=[]; // [{parentKey, num, emp, dept}]
+  const seen=new Set();
+
+  (_cardSheetData||[]).forEach(row=>{
+    const rawPNum=String(row[pNumI]||'').trim();
+    if(!rawPNum) return;
+    const pKey=rawPNum.replace(/[^a-zA-Z0-9]/g,'').slice(-5).toUpperCase();
+    const pName=pNameI>=0?String(row[pNameI]||'').trim():'';
+    const dept=deptI>=0?String(row[deptI]||'').trim():'';
+    const rawCNum=cNumI>=0?String(row[cNumI]||'').trim():'';
+    const emp=cEmpI>=0?String(row[cEmpI]||'').trim():'';
+    const cKey=rawCNum.replace(/[^a-zA-Z0-9]/g,'').slice(-5).toUpperCase();
+
+    if(!parentMap.has(pKey)) parentMap.set(pKey,{num:pKey,name:pName,dept});
+
+    if(cKey){
+      const childSeen=pKey+'|'+cKey;
+      if(!seen.has(childSeen)){
+        seen.add(childSeen);
+        childList.push({parentKey:pKey,num:cKey,emp,dept:dept||parentMap.get(pKey)?.dept||''});
+      }
+    }
+  });
+
+  // Build preview HTML
+  let html=`<table class="tbl"><thead><tr>
+    <th>Type</th><th>Card Number</th><th>Name / Label</th><th>Department</th><th>Employee</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  let newP=0,skipP=0,newC=0,skipC=0;
+
+  parentMap.forEach(({num,name,dept},pKey)=>{
+    const exists=CARDS.find(c=>!c.parentId&&c.num.toUpperCase()===pKey);
+    const isNew=!exists;
+    if(isNew) newP++; else skipP++;
+    html+=`<tr style="background:${isNew?'rgba(168,255,96,.04)':'rgba(255,255,255,.01)'}">
+      <td><span class="bdg bdg-parent">PARENT</span></td>
+      <td style="font-family:var(--mono);font-weight:600">****${num}</td>
+      <td>${name||'—'}</td>
+      <td>${dept||'—'}</td>
+      <td style="color:var(--t3)">—</td>
+      <td>${isNew?'<span style="color:var(--ok);font-size:10px">✓ New</span>':'<span style="color:var(--t3);font-size:10px">Already exists</span>'}</td>
+    </tr>`;
+  });
+
+  childList.forEach(({parentKey,num,emp,dept})=>{
+    const parent=CARDS.find(c=>!c.parentId&&c.num.toUpperCase()===parentKey);
+    const parentInMap=parentMap.has(parentKey);
+    const existParent=parent||parentInMap;
+    const existChild=parent&&CARDS.find(c=>c.parentId===parent.id&&c.num.toUpperCase()===num);
+    const isNew=!existChild;
+    if(isNew) newC++; else skipC++;
+    html+=`<tr style="background:${isNew?'rgba(96,168,255,.04)':'rgba(255,255,255,.01)'}">
+      <td><span class="bdg bdg-child">CHILD</span></td>
+      <td style="font-family:var(--mono);font-weight:600;padding-left:20px">└ ****${num}</td>
+      <td style="color:var(--t3)">—</td>
+      <td>${dept||'—'}</td>
+      <td>${emp||'—'}</td>
+      <td>${isNew?'<span style="color:var(--acc2);font-size:10px">✓ New</span>':'<span style="color:var(--t3);font-size:10px">Already exists</span>'}</td>
+    </tr>`;
+  });
+
+  html+='</tbody></table>';
+
+  document.getElementById('card-prev-list').innerHTML=html;
+  document.getElementById('card-prev-cnt').textContent=
+    `— ${newP} new parents, ${newC} new children (${skipP+skipC} duplicates skipped)`;
+  document.getElementById('card-prev-sec').style.display='block';
+  document.getElementById('card-map-sec').style.display='none';
+
+  // Store mapping for import
+  window._cardImportData={parentMap,childList,
+    pNumI:parseInt(document.getElementById('cm-pnum').value),
+    pNameI:parseInt(document.getElementById('cm-pname').value),
+    deptI:parseInt(document.getElementById('cm-dept').value),
+    cNumI:parseInt(document.getElementById('cm-cnum').value),
+    cEmpI:parseInt(document.getElementById('cm-cemp').value)
+  };
+}
+
+function importCardUpload(){
+  const {parentMap,childList}=window._cardImportData||{};
+  if(!parentMap) return;
+  let addedP=0,addedC=0,skipP=0,skipC=0;
+
+  // Add parents first
+  const parentIdMap=new Map(); // pKey => card id
+  parentMap.forEach(({num,name,dept},pKey)=>{
+    let existing=CARDS.find(c=>!c.parentId&&c.num.toUpperCase()===pKey);
+    if(existing){skipP++;parentIdMap.set(pKey,existing.id);}
+    else{
+      const newCard={id:cid++,num,name,type:'shared',employee:'',dept,parentId:null};
+      CARDS.push(newCard);
+      parentIdMap.set(pKey,newCard.id);
+      addedP++;
+    }
+  });
+
+  // Add children
+  childList.forEach(({parentKey,num,emp,dept})=>{
+    const pid=parentIdMap.get(parentKey);
+    if(!pid) return;
+    const exists=CARDS.find(c=>c.parentId===pid&&c.num.toUpperCase()===num);
+    if(exists){skipC++;return;}
+    const parent=CARDS.find(c=>c.id===pid);
+    CARDS.push({id:cid++,num,name:emp||num,type:'personal',employee:emp,dept:dept||parent?.dept||'',parentId:pid});
+    addedC++;
+  });
+
+  renderCardTree(); populateCardSelects(); populateUploadCardSel(); refresh();
+  resetCardUpload();
+  ok(`Cards Imported!`,`${addedP} parent cards + ${addedC} child cards added. ${skipP+skipC} duplicates skipped.`);
+}
+
+function resetCardUpload(){
+  _cardSheetData=null;
+  document.getElementById('fi-cards').value='';
+  document.getElementById('card-map-sec').style.display='none';
+  document.getElementById('card-prev-sec').style.display='none';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════════════════
+function renderCOAList(){
+  document.getElementById('coa-list').innerHTML=COA.length?`
+    <table class="tbl"><thead><tr><th>Code</th><th>Name</th><th>Cat</th><th></th></tr></thead><tbody>
+    ${COA.map((c,i)=>`<tr><td>${c.code}</td><td>${c.name}</td><td>${c.cat}</td>
+      <td><button class="btn btn-d btn-xs" onclick="COA.splice(${i},1);renderCOAList()">Del</button></td></tr>`).join('')}
+    </tbody></table>`:'<div class="empty" style="padding:12px">No COA added.</div>';
+}
+
+function addCOA(){
+  const code=document.getElementById('coa-code').value.trim();
+  const name=document.getElementById('coa-name').value.trim();
+  const cat=document.getElementById('coa-cat').value;
+  if(!code||!name){alert('Code and Name are required.');return;}
+  COA.push({code,name,cat});
+  document.getElementById('coa-code').value='';document.getElementById('coa-name').value='';
+  renderCOAList();
+}
+
+function saveCurrency(){
+  CUR.symbol=document.getElementById('cur-symbol').value.trim()||'$';
+  CUR.name=document.getElementById('cur-name').value.trim()||'USD';
+  CUR.decimals=parseInt(document.getElementById('cur-decimals').value)||0;
+  updateCurrencyPreview();
+  const el=document.getElementById('cur-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000);
+  refresh();
+}
+function updateCurrencyPreview(){
+  const sym=document.getElementById('cur-symbol')?.value||'$';
+  const dec=parseInt(document.getElementById('cur-decimals')?.value||2);
+  const preview=sym+' '+Number(12500.75).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  const el=document.getElementById('cur-preview');if(el)el.textContent=preview;
+}
+function saveAX(){
+  AX=[1,2,3,4].map(i=>document.getElementById('ax'+i)?.value.trim()||'');
+  const el=document.getElementById('ax-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000);
+}
+
+function savePDF(){
+  PDFkw={date:document.getElementById('kw-date').value||'date',amt:document.getElementById('kw-amt').value||'amount',desc:document.getElementById('kw-desc').value||'description',card:document.getElementById('kw-card').value||'card'};
+  const el=document.getElementById('pdf-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000);
+}
+
+// ── MANUAL ADD ──
+function toggleManual(){
+  // m-type removed; emp always shown, dept hidden by default
+}
+function onMCardChange(){
+  const cid2=parseInt(document.getElementById('m-card-sel')?.value)||null;
+  const card=CARDS.find(c=>c.id===cid2);
+  if(card){
+    document.getElementById('m-type').value=card.type;
+    document.getElementById('m-emp').value=card.employee||'';
+    document.getElementById('m-dept').value=card.dept||'';
+    toggleManual();
+  }
+}
+function manualAdd(){
+  const date=document.getElementById('m-date').value;
+  const desc=document.getElementById('m-desc').value.trim();
+  const amt=parseFloat(document.getElementById('m-amt').value);
+  const selCardId=parseInt(document.getElementById('m-card-sel')?.value)||null;
+  const emp=document.getElementById('m-emp').value.trim();
+  const dept=document.getElementById('m-dept').value.trim();
+  const mo=document.getElementById('m-month')?.value||String(new Date().getMonth()+1).padStart(2,'0');
+  const yr=document.getElementById('m-year')?.value||new Date().getFullYear();
+  const stmtLabel=yr+'-'+mo;
+  if(!desc||isNaN(amt)||amt<=0){alert('Description and Amount are required.');return;}
+  let finalCardId=selCardId;
+  if(!finalCardId){
+    const card=CARDS[0]||null;
+    if(card) finalCardId=card.id;
+    else { alert('Please add a card first, or select one.'); return; }
+  }
+  const ci=getCardInfo(finalCardId);
+  TXN.push({id:makeTxnId(finalCardId,stmtLabel),date,merchant:desc,amount:amt,
+    cardType:ci.type||'personal',cardId:finalCardId,
+    employee:ci.employee||emp,dept:ci.dept||dept,
+    stmtMonth:stmtLabel,txnMonth:stmtLabel,
+    reviewed:false,rd:null});
+  ['m-date','m-desc','m-amt','m-emp','m-dept'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  refresh();
+  ok('Transaction Added!','Check the dashboard.');
+}
+
+// ── SAMPLE DATA ──
+function loadSample(){
+  // Add parent cards
+  const p1={id:cid++,num:'1234',name:'Operations Master',type:'shared',employee:'',dept:'Operations',parentId:null};
+  const p2={id:cid++,num:'5678',name:'Exec Card',type:'personal',employee:'Ahmed Raza',dept:'',parentId:null};
+  const c1={id:cid++,num:'1111',name:'Ali Hassan',type:'personal',employee:'Ali Hassan',dept:'Operations',parentId:p1.id};
+  const c2={id:cid++,num:'2222',name:'Sara Khan',type:'personal',employee:'Sara Khan',dept:'Operations',parentId:p1.id};
+  CARDS.push(p1,p2,c1,c2);
+  const txnData=[
+    {date:'2025-03-02',merchant:'Metro Cash & Carry',amount:12500,cardId:c1.id,employee:'Ali Hassan',dept:'Operations',cardType:'personal',stmtMonth:'2025-03'},
+    {date:'2025-03-05',merchant:'Shell Fuel Station',amount:8200,cardId:c1.id,employee:'Ali Hassan',dept:'Operations',cardType:'personal',stmtMonth:'2025-03'},
+    {date:'2025-03-07',merchant:"Agha's Supermarket",amount:6300,cardId:c2.id,employee:'Sara Khan',dept:'Operations',cardType:'personal',stmtMonth:'2025-03'},
+    {date:'2025-03-08',merchant:'Islamabad Stationers',amount:3400,cardId:p1.id,employee:'',dept:'Operations',cardType:'shared',stmtMonth:'2025-03'},
+    {date:'2025-03-10',merchant:'Al-Fatah',amount:5100,cardId:p1.id,employee:'',dept:'Operations',cardType:'shared',stmtMonth:'2025-03'},
+    {date:'2025-03-12',merchant:'Lucky One Parking',amount:1500,cardId:p2.id,employee:'Ahmed Raza',dept:'',cardType:'personal',stmtMonth:'2025-03'},
+    {date:'2025-03-15',merchant:'Careem Business',amount:2800,cardId:p2.id,employee:'Ahmed Raza',dept:'',cardType:'personal',stmtMonth:'2025-03'},
+  ];
+  txnData.forEach(x=>TXN.push({...x,id:makeTxnId(x.cardId,x.stmtMonth),reviewed:false,rd:null}));
+  renderCardTree(); populateCardSelects(); populateUploadCardSel(); refresh();
+  ok('Sample Data Loaded!','Check the Dashboard and Review tabs.');
+}
+
+// ── INIT ──
+// Set statement month/year to current
+(function(){
+  const now=new Date();
+  const mo=String(now.getMonth()+1).padStart(2,'0');
+  const yr=now.getFullYear();
+  const mSel=document.getElementById('up-month');
+  const ySel=document.getElementById('up-year');
+  if(mSel) mSel.value=mo;
+  if(ySel) ySel.value=yr;
+  const mmSel=document.getElementById('m-month');
+  const myInp=document.getElementById('m-year');
+  if(mmSel) mmSel.value=mo;
+  if(myInp) myInp.value=yr;
+})();
+refresh();
+renderReportFields();
+populateUploadCardSel();
+// Populate manual add card select
+function populateManualCardSel(){
+  const el=document.getElementById('m-card-sel');
+  if(!el)return;
+  // Group by parent
+  const parents=CARDS.filter(c=>!c.parentId);
+  let html='<option value="">-- Select Card --</option>';
+  parents.forEach(p=>{
+    const children=CARDS.filter(c=>c.parentId===p.id);
+    if(children.length){
+      html+=`<optgroup label="****${p.num} — ${p.name||p.dept||'—'}">`;
+      children.forEach(ch=>{
+        html+=`<option value="${ch.id}">  ****${ch.num} — ${ch.employee||'—'} (${ch.dept||'—'})</option>`;
+      });
+      html+='</optgroup>';
+    } else {
+      html+=`<option value="${p.id}">****${p.num} — ${p.name||p.dept||'—'} (Parent)</option>`;
+    }
+  });
+  el.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BANK ACCOUNTS
+// ══════════════════════════════════════════════════════════════════════
+function addBank(){
+  const name=document.getElementById('bank-name').value.trim();
+  const acc=document.getElementById('bank-acc').value.trim();
+  const title=document.getElementById('bank-title').value.trim();
+  if(!name||!acc) return alert('Bank Name and Account Number are required.');
+  BANKS.push({id:bid++,name,acc,title});
+  ['bank-name','bank-acc','bank-title'].forEach(id=>document.getElementById(id).value='');
+  renderBankList(); populateBankSelects(); renderCardBankAssign();
+}
+
+function renderBankList(){
+  const el=document.getElementById('bank-list');
+  if(!el) return;
+  el.innerHTML=BANKS.length?`
+    <table class="tbl"><thead><tr><th>Bank</th><th>Account</th><th>Title</th><th></th></tr></thead><tbody>
+    ${BANKS.map((b,i)=>`<tr>
+      <td style="font-weight:600">${b.name}</td>
+      <td style="font-family:var(--mono)">${b.acc}</td>
+      <td>${b.title||'—'}</td>
+      <td><button class="btn btn-d btn-xs" onclick="BANKS.splice(${i},1);renderBankList();populateBankSelects()">Del</button></td>
+    </tr>`).join('')}
+    </tbody></table>`:'<div class="empty" style="padding:10px">No bank accounts added yet.</div>';
+}
+
+function populateBankSelects(){
+  const noOpt='<option value="">-- Select Bank --</option>';
+  const opts=BANKS.map(b=>`<option value="${b.id}">${b.name} — ${b.acc}${b.title?' ('+b.title+')':''}</option>`).join('');
+  // Settings parent card bank dropdown
+  const pcBank=document.getElementById('pc-bank');
+  if(pcBank) pcBank.innerHTML=noOpt+opts;
+  // Payment modal bank dropdown
+  const pmBank=document.getElementById('pm-bank');
+  if(pmBank) pmBank.innerHTML=noOpt+opts;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// WORKING DAYS HELPER
+// ══════════════════════════════════════════════════════════════════════
+function workingDaysUntil(targetDate){
+  // Count working days (Mon-Fri) from today to targetDate
+  const today=new Date(); today.setHours(0,0,0,0);
+  const target=new Date(targetDate); target.setHours(0,0,0,0);
+  if(target<=today) return 0;
+  let count=0, d=new Date(today);
+  d.setDate(d.getDate()+1); // start from tomorrow
+  while(d<=target){
+    const dow=d.getDay();
+    if(dow!==0&&dow!==6) count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
+
+
+function renderCardBankAssign(){
+  const el=document.getElementById('card-bank-assign-list');
+  if(!el) return;
+  const parents=CARDS.filter(c=>!c.parentId);
+  if(!parents.length){
+    el.innerHTML='<div class="empty" style="padding:10px">No parent cards added yet.</div>';
+    return;
+  }
+  if(!BANKS.length){
+    el.innerHTML='<div class="alert al-w">Please add Bank Accounts in the section above first.</div>';
+    return;
+  }
+  const bankOpts='<option value="">-- Select Bank --</option>'+
+    BANKS.map(b=>`<option value="${b.id}">${b.name} — ${b.acc}${b.title?' ('+b.title+')':''}</option>`).join('');
+
+  let h=`<table class="tbl"><thead><tr>
+    <th>Card</th><th>Name / Label</th><th>Department</th><th>Assigned Bank</th>
+  </tr></thead><tbody>`;
+  parents.forEach(p=>{
+    h+=`<tr>
+      <td style="font-family:var(--mono);font-weight:700">****${p.num}</td>
+      <td>${p.name||'—'}</td>
+      <td>${p.dept||'—'}</td>
+      <td>
+        <select style="font-size:11px;padding:4px 8px;background:var(--bg);border:1px solid var(--b1);border-radius:6px;color:var(--t1);font-family:var(--mono);width:100%"
+          onchange="updateCardBank(${p.id},this.value)">
+          ${bankOpts.replace(`value="${p.bankId||''}"`,`value="${p.bankId||''}" selected`)}
+        </select>
+      </td>
+    </tr>`;
+  });
+  h+='</tbody></table>';
+  el.innerHTML=h;
+}
+
+function updateCardBank(cardId, bankId){
+  const card=CARDS.find(c=>c.id===cardId);
+  if(card) card.bankId=parseInt(bankId)||null;
+}
+
+function updateCardDueDate(cardId, newDate){
+  const card=CARDS.find(c=>c.id===cardId);
+  if(card) card.dueDate=newDate||null;
+}
+
+function getDueDateForMonth(card, stmtMonth){
+  // Read from DUE_DATES[parentId|stmtMonth] — set during upload
+  if(!card||!stmtMonth) return null;
+  return DUE_DATES[card.id+'|'+stmtMonth]||null;
+}
+
+function getDueStatus(dueDateStr){
+  if(!dueDateStr) return {label:'No Due Date',cls:'',urgent:false};
+  const today=new Date(); today.setHours(0,0,0,0);
+  const due=new Date(dueDateStr); due.setHours(0,0,0,0);
+  const wdays=workingDaysUntil(due);
+  const diff=Math.round((due-today)/(1000*60*60*24));
+  if(diff<0) return {label:'OVERDUE by '+Math.abs(diff)+' days',cls:'overdue',urgent:true};
+  if(wdays<=3) return {label:wdays+' working day'+(wdays===1?'':'s')+' left',cls:'urgent',urgent:true};
+  return {label:diff+' days left',cls:'',urgent:false};
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PAYMENT — RENDER
+// ══════════════════════════════════════════════════════════════════════
+function populatePaymentMonthFilter(){
+  const months=[...new Set(TXN.map(t=>t.stmtMonth).filter(Boolean))].sort().reverse();
+  const monthNames={
+    '01':'January','02':'February','03':'March','04':'April',
+    '05':'May','06':'June','07':'July','08':'August',
+    '09':'September','10':'October','11':'November','12':'December'
+  };
+  const el=document.getElementById('pay-month-filter');
+  if(!el) return;
+  el.innerHTML='<option value="">-- Select Month --</option>'+
+    months.map(m=>{const[yr,mo]=m.split('-');return`<option value="${m}">${monthNames[mo]||mo} ${yr}</option>`;}).join('');
+  if(months.length) el.value=months[0];
+}
+
+function renderPayment(){
+  const stmtMonth=document.getElementById('pay-month-filter')?.value||'';
+  const container=document.getElementById('payment-container');
+  if(!stmtMonth){container.innerHTML='<div class="empty">Select a statement month above.</div>';return;}
+
+  const parents=CARDS.filter(c=>!c.parentId);
+  if(!parents.length){container.innerHTML='<div class="empty">No parent cards found. Add cards first.</div>';return;}
+
+  // Only show parents that have transactions in this month
+  const activeParents=parents.filter(p=>{
+    const childIds=CARDS.filter(c=>c.parentId===p.id).map(c=>c.id);
+    const allIds=[p.id,...childIds];
+    return TXN.some(t=>allIds.includes(t.cardId)&&t.stmtMonth===stmtMonth);
+  });
+
+  if(!activeParents.length){
+    container.innerHTML='<div class="empty">No transactions found for this month. Upload data first.</div>';
+    return;
+  }
+
+  let paidCount=0, pendingCount=0;
+  let html='';
+
+  activeParents.forEach(p=>{
+    const children=CARDS.filter(c=>c.parentId===p.id);
+    const allIds=[p.id,...children.map(c=>c.id)];
+    const txns=TXN.filter(t=>allIds.includes(t.cardId)&&t.stmtMonth===stmtMonth);
+    const total=txns.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+
+    const payment=PAYMENTS.find(py=>py.cardId===p.id&&py.stmtMonth===stmtMonth);
+    const isPaid=!!payment;
+    if(isPaid) paidCount++; else pendingCount++;
+
+    const bank=BANKS.find(b=>b.id===p.bankId);
+    const dueDateStr=getDueDateForMonth(p,stmtMonth);
+    const dueStatus=getDueStatus(dueDateStr);
+
+    // Urgent styling
+    const urgentBorder=(!isPaid&&dueStatus.urgent)?'border-color:var(--acc3);box-shadow:0 0 0 1px var(--acc3)':'';
+    const urgentBg=(!isPaid&&dueStatus.cls==='overdue')?'background:rgba(255,96,136,.04)':
+                   (!isPaid&&dueStatus.cls==='urgent')?'background:rgba(255,192,80,.04)':'';
+
+    // Child breakdown
+    let childBreakdown='';
+    children.forEach(ch=>{
+      const ct=TXN.filter(t=>t.cardId===ch.id&&t.stmtMonth===stmtMonth);
+      const ctTotal=ct.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+      if(ct.length)childBreakdown+=`
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(40,40,47,.6);font-size:11px">
+          <span style="color:var(--t2);font-family:var(--mono)">└ ****${ch.num} · ${ch.employee||'—'}</span>
+          <span style="font-family:var(--mono);color:var(--t1)">${fmt(ctTotal)} <span style="color:var(--t3);font-size:10px">(${ct.length} txns)</span></span>
+        </div>`;
+    });
+    // Parent direct txns
+    const pDirect=TXN.filter(t=>t.cardId===p.id&&t.stmtMonth===stmtMonth);
+    if(pDirect.length){
+      const pdt=pDirect.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+      childBreakdown=`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(40,40,47,.6);font-size:11px">
+        <span style="color:var(--t2);font-family:var(--mono)">└ Direct (Parent card)</span>
+        <span style="font-family:var(--mono);color:var(--t1)">${fmt(pdt)} <span style="color:var(--t3);font-size:10px">(${pDirect.length} txns)</span></span>
+      </div>`+childBreakdown;
+    }
+
+    html+=`<div class="card" style="margin-bottom:12px;${urgentBorder};${urgentBg}">
+      <!-- Header row -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span class="bdg bdg-parent">PARENT</span>
+            <span style="font-family:var(--mono);font-size:14px;font-weight:700">****${p.num}</span>
+            <span style="font-size:13px;font-weight:600">${p.name||'—'}</span>
+            ${p.dept?`<span style="font-size:10px;color:var(--t2)">${p.dept}</span>`:''}
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;font-family:var(--mono);color:var(--t2)">
+            <span style="display:flex;align-items:center;gap:6px">
+              📅 Due:
+              <input type="date" value="${dueDateStr||''}"
+                style="font-size:11px;font-family:var(--mono);background:var(--s2);border:1px solid var(--b2);border-radius:5px;color:var(--t1);padding:2px 6px;"
+                onchange="DUE_DATES[${p.id}+'|'+'${stmtMonth}']=this.value;renderPayment()"
+                title="Edit due date for this month">
+              ${dueDateStr?`<span style="padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600;
+                ${dueStatus.cls==='overdue'?'background:rgba(255,96,136,.15);color:var(--acc3)':
+                  dueStatus.cls==='urgent'?'background:rgba(255,192,80,.15);color:var(--warn)':
+                  'background:rgba(96,255,176,.1);color:var(--ok)'}">${dueStatus.label}</span>`:'<span style="font-size:10px;color:var(--t3)">not set</span>'}
+            </span>
+            <span>🏦 ${bank?(bank.name+' — '+bank.acc):'<span style="color:var(--acc3)">No bank set</span>'}</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--acc)">${fmt(total)}</div>
+          <div style="font-size:10px;color:var(--t2);font-family:var(--mono)">${txns.length} transactions · ${children.length} cardholders</div>
+        </div>
+      </div>
+
+      <!-- Child breakdown (collapsible) -->
+      <div style="margin-bottom:12px">
+        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+          style="font-size:10px;color:var(--t3);cursor:pointer;font-family:var(--mono);margin-bottom:6px;user-select:none">
+          ▶ Cardholder Breakdown
+        </div>
+        <div style="display:none;background:var(--s2);border-radius:6px;padding:8px 12px">
+          ${childBreakdown||'<div style="font-size:11px;color:var(--t3)">No breakdown available.</div>'}
+        </div>
+      </div>
+
+      <!-- Payment status / actions -->
+      ${isPaid?`
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(96,255,176,.06);border:1px solid rgba(96,255,176,.2);border-radius:8px;padding:10px 14px">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+            <span style="color:var(--ok);font-size:14px">✓</span>
+            <span style="font-size:12px;font-weight:600;color:var(--ok)">PAID</span>
+            <span style="font-size:11px;font-family:var(--mono);color:var(--t2)">${payment.date} · ${fmt(payment.amount)}</span>
+            ${payment.amount!==total?`<span style="font-size:10px;font-family:var(--mono);color:var(--warn)">Δ ${fmt(payment.amount-total)}</span>`:''}
+          </div>
+          <div style="font-size:10px;color:var(--t2);font-family:var(--mono)">
+            ${BANKS.find(b=>b.id===payment.bankId)?.name||'—'}
+            ${payment.ref?' · Ref: '+payment.ref:''}
+            ${payment.diffReason?' · Note: '+payment.diffReason:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-s btn-xs" onclick="showPayHistory(${p.id})">History</button>
+          <button class="btn btn-xs" style="background:rgba(255,96,136,.1);color:var(--acc3);border:1px solid rgba(255,96,136,.3)"
+            onclick="if(confirm('Mark as unpaid?')){PAYMENTS=PAYMENTS.filter(x=>!(x.cardId===${p.id}&&x.stmtMonth==='${stmtMonth}'));renderPayment();}">Undo</button>
+        </div>
+      </div>`:`
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 14px">
+        <div style="font-size:11px;color:var(--t2);font-family:var(--mono)">
+          ${!isPaid&&dueStatus.urgent?`<span style="color:${dueStatus.cls==='overdue'?'var(--acc3)':'var(--warn)'};font-weight:600">⚠ ${dueStatus.label} — </span>`:''}
+          Payment pending
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-s btn-xs" onclick="showPayHistory(${p.id})">History</button>
+          <button class="btn btn-p btn-xs" onclick="openPayModal(${p.id},'${stmtMonth}',${total})">Record Payment</button>
+        </div>
+      </div>`}
+    </div>`;
+  });
+
+  container.innerHTML=html;
+
+  // Update stats
+  document.getElementById('pay-stat-paid').textContent=paidCount+' Paid ✓';
+  document.getElementById('pay-stat-pending').textContent=pendingCount+' Pending';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PAYMENT MODAL
+// ══════════════════════════════════════════════════════════════════════
+let _pmCardId=null, _pmMonth=null, _pmTotal=0;
+
+function openPayModal(cardId, stmtMonth, total){
+  _pmCardId=cardId; _pmMonth=stmtMonth; _pmTotal=total;
+  const card=CARDS.find(c=>c.id===cardId);
+  document.getElementById('pm-title').textContent='Record Payment — ****'+(card?.num||'');
+  document.getElementById('pm-sub').textContent=(card?.name||'')+(stmtMonth?' · '+stmtMonth:'');
+  document.getElementById('pm-total').value=fmtRaw(total);
+  document.getElementById('pm-amount').value=fmtRaw(total);
+  document.getElementById('pm-diff-row').style.display='none';
+  document.getElementById('pm-diff-reason').value='';
+  document.getElementById('pm-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pm-ref').value='';
+  document.getElementById('pm-notes').value='';
+  // Auto-set bank from card's assigned bank — no user selection
+  const cardBank=BANKS.find(b=>b.id===card?.bankId);
+  const pmBankHidden=document.getElementById('pm-bank');
+  const pmBankDisplay=document.getElementById('pm-bank-display');
+  if(pmBankHidden) pmBankHidden.value=card?.bankId||'';
+  if(pmBankDisplay){
+    if(cardBank){
+      pmBankDisplay.textContent=cardBank.name+' — '+cardBank.acc+(cardBank.title?' ('+cardBank.title+')':'');
+      pmBankDisplay.style.color='var(--acc2)';
+    } else {
+      pmBankDisplay.innerHTML='<span style="color:var(--acc3)">⚠ No bank assigned to this card — set in Settings → Cards</span>';
+      pmBankDisplay.style.color='';
+    }
+  }
+  document.getElementById('m-payment').classList.add('on');
+}
+
+function onPmAmountChange(){
+  const amt=parseFloat(document.getElementById('pm-amount').value)||0;
+  const diff=Math.abs(amt-_pmTotal);
+  const diffRow=document.getElementById('pm-diff-row');
+  // Show diff reason if difference > 0.01
+  diffRow.style.display=(diff>0.01)?'block':'none';
+}
+
+function savePayment(){
+  const amt=parseFloat(document.getElementById('pm-amount').value)||0;
+  const date=document.getElementById('pm-date').value;
+  const bankId=parseInt(document.getElementById('pm-bank').value)||null;
+  const ref=document.getElementById('pm-ref').value.trim();
+  const notes=document.getElementById('pm-notes').value.trim();
+  const diffReason=document.getElementById('pm-diff-reason').value.trim();
+
+  if(!amt||amt<=0) return alert('Payment amount required.');
+  if(!date) return alert('Payment date required.');
+  if(!bankId) return alert('Bank account not assigned to this card. Please assign a bank in Settings → Cards first.');
+
+  const diff=Math.abs(amt-_pmTotal);
+  if(diff>0.01&&!diffReason) return alert('Please provide a reason for the difference between total and payment amount.');
+
+  PAYMENTS.push({
+    id:pyid++,
+    cardId:_pmCardId,
+    stmtMonth:_pmMonth,
+    amount:amt,
+    totalAmount:_pmTotal,
+    diffReason:diffReason||'',
+    date,bankId,ref,notes,
+    paidAt:new Date().toISOString()
+  });
+
+  cm();
+  renderPayment();
+  ok('Payment Recorded!','****'+(CARDS.find(c=>c.id===_pmCardId)?.num||'')+' · '+_pmMonth+' · '+fmt(amt));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PAYMENT HISTORY
+// ══════════════════════════════════════════════════════════════════════
+function showPayHistory(cardId){
+  const card=CARDS.find(c=>c.id===cardId);
+  const history=PAYMENTS.filter(p=>p.cardId===cardId).sort((a,b)=>b.stmtMonth.localeCompare(a.stmtMonth));
+  document.getElementById('ph-title').textContent='Payment History — ****'+(card?.num||'');
+  document.getElementById('ph-sub').textContent=card?.name||'';
+
+  if(!history.length){
+    document.getElementById('ph-body').innerHTML='<div class="empty">No payment records found for this card.</div>';
+  } else {
+    let h=`<div class="tbl-w"><table class="tbl"><thead><tr>
+      <th>Month</th><th>Statement Total</th><th>Paid Amount</th><th>Difference</th><th>Date</th><th>Bank</th><th>Reference</th><th>Note / Reason</th>
+    </tr></thead><tbody>`;
+    history.forEach(p=>{
+      const diff=p.amount-p.totalAmount;
+      const bank=BANKS.find(b=>b.id===p.bankId);
+      h+=`<tr>
+        <td style="font-family:var(--mono)">${p.stmtMonth}</td>
+        <td class="amt">${fmt(p.totalAmount)}</td>
+        <td class="amt">${fmt(p.amount)}</td>
+        <td style="font-family:var(--mono);color:${Math.abs(diff)>0.01?(diff>0?'var(--ok)':'var(--acc3)'):'var(--t3)'}">${Math.abs(diff)>0.01?fmt(diff):'—'}</td>
+        <td style="font-family:var(--mono)">${p.date}</td>
+        <td>${bank?(bank.name+'<br><span style="font-size:9px;color:var(--t2)">'+bank.acc+'</span>'):'—'}</td>
+        <td style="font-family:var(--mono);font-size:10px">${p.ref||'—'}</td>
+        <td style="font-size:10px;color:var(--t2)">${p.diffReason||p.notes||'—'}</td>
+      </tr>`;
+    });
+    h+='</tbody></table></div>';
+    document.getElementById('ph-body').innerHTML=h;
+  }
+  document.getElementById('m-pay-history').classList.add('on');
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+// COA SEARCHABLE DROPDOWN
+// ══════════════════════════════════════════════════════════════════════
+let _coaActiveIdx = {};
+
+function showCoaDropdown(input, txnId){
+  const dd=document.getElementById('coa-dd-'+txnId);
+  if(!dd) return;
+  const q=(input.value||'').toLowerCase().trim();
+  const matches=q
+    ? COA.filter(c=>c.code.toLowerCase().includes(q)||c.name.toLowerCase().includes(q))
+    : COA;
+
+  if(!matches.length){
+    dd.innerHTML='<div style="padding:10px;font-size:11px;color:var(--t3);font-family:var(--mono)">No accounts found.</div>';
+    dd.style.display='block';
+    return;
+  }
+
+  dd.innerHTML=matches.map((c,i)=>`
+    <div class="coa-opt" data-val="${c.code} - ${c.name}" data-idx="${i}"
+      style="padding:8px 12px;cursor:pointer;font-size:11px;font-family:var(--mono);display:flex;gap:10px;align-items:center;border-bottom:1px solid rgba(40,40,47,.5)"
+      onmousedown="selectCoa(event,'${c.code} - ${c.name}','${txnId}')"
+      onmouseenter="highlightCoa('${txnId}',${i})">
+      <span style="color:var(--acc2);min-width:48px">${c.code}</span>
+      <span style="color:var(--t1)">${c.name}</span>
+      <span style="margin-left:auto;font-size:9px;color:var(--t3)">${c.cat}</span>
+    </div>`).join('');
+  _coaActiveIdx[txnId]=-1;
+  dd.style.display='block';
+
+  // Close other open dropdowns
+  document.querySelectorAll('[id^="coa-dd-"]').forEach(el=>{
+    if(el.id!=='coa-dd-'+txnId) el.style.display='none';
+  });
+}
+
+function selectCoa(e, val, txnId){
+  e.preventDefault();
+  const inp=document.getElementById('f-coa-'+txnId);
+  if(inp) inp.value=val;
+  closeCoaDropdown(txnId);
+}
+
+function closeCoaDropdown(txnId){
+  const dd=document.getElementById('coa-dd-'+txnId);
+  if(dd) dd.style.display='none';
+}
+
+function highlightCoa(txnId, idx){
+  const dd=document.getElementById('coa-dd-'+txnId);
+  if(!dd) return;
+  dd.querySelectorAll('.coa-opt').forEach((el,i)=>{
+    el.style.background=i===idx?'rgba(168,255,96,.1)':'';
+  });
+  _coaActiveIdx[txnId]=idx;
+}
+
+function coaKeyNav(e, txnId){
+  const dd=document.getElementById('coa-dd-'+txnId);
+  if(!dd||dd.style.display==='none') return;
+  const opts=dd.querySelectorAll('.coa-opt');
+  let idx=_coaActiveIdx[txnId]||0;
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    idx=Math.min(idx+1,opts.length-1);
+    highlightCoa(txnId,idx);
+    opts[idx]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    idx=Math.max(idx-1,0);
+    highlightCoa(txnId,idx);
+    opts[idx]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    const active=dd.querySelector('.coa-opt[data-idx="'+idx+'"]');
+    if(active){
+      const inp=document.getElementById('f-coa-'+txnId);
+      if(inp) inp.value=active.dataset.val;
+      closeCoaDropdown(txnId);
+    }
+  } else if(e.key==='Escape'){
+    closeCoaDropdown(txnId);
+  }
+}
+
+// Close COA dropdowns when clicking outside
+document.addEventListener('click',function(e){
+  if(!e.target.closest('[id^="coa-dd-"]')&&!e.target.id?.startsWith('f-coa-')){
+    document.querySelectorAll('[id^="coa-dd-"]').forEach(el=>el.style.display='none');
+  }
+});
+
+
+// ════════════════════════════════════════════════
+// ADD ALL UNMATCHED CARDS AT ONCE
+// ════════════════════════════════════════════════
+function addAllUnmatched(){
+  // Find all combos that are NOT yet matched in _cardMatchMap
+  const allSelects = document.querySelectorAll('[id^="cmatch-"]');
+  let addedCount = 0;
+
+  allSelects.forEach(sel=>{
+    // Already matched — skip
+    if(sel.value && parseInt(sel.value)) return;
+
+    // Extract comboKey from select id: "cmatch-PARENTKEY_CHILDKEY" → "PARENTKEY|CHILDKEY"
+    const rawId = sel.id.replace('cmatch-','');
+    // Find this combo in _cardMatchMap area — reconstruct key from rawId
+    // rawId uses _ instead of | and non-alphanum replaced
+    // We need to find the original combo. Look at the emp input sibling:
+    const empId = 'cmadd-emp-' + rawId;
+    const empInp = document.getElementById(empId);
+
+    // Get the display text from the card info div above this select
+    const wrapper = sel.closest('div[style*="background:var(--s2)"]');
+    if(!wrapper) return;
+
+    // Extract parentRaw and childRaw from the display divs
+    const divs = wrapper.querySelectorAll('div[style*="font-size:12px"], div[style*="font-size:11px;color:var(--acc2)"]');
+    let parentRaw = '', childRaw = '';
+    divs.forEach(d=>{
+      if(d.style.fontSize==='12px') parentRaw = d.textContent.trim();
+      if(d.style.color && d.style.color.includes('rgb(96, 168, 255)')) childRaw = d.textContent.trim();
+    });
+
+    // Use employee name from input if available, otherwise use childRaw or parentRaw
+    const empName = empInp?.value.trim() || childRaw || parentRaw;
+    const parentKey = normalizeCardKey(parentRaw);
+    const childKey = normalizeCardKey(childRaw);
+
+    if(!parentKey) return;
+
+    // Find or create parent
+    let parent = CARDS.find(c=>!c.parentId && normalizeCardKey(c.num)===parentKey);
+    if(!parent){
+      parent = {id:cid++, num:parentKey, name:parentRaw, type:'shared', employee:'', dept:'', parentId:null};
+      CARDS.push(parent);
+    }
+
+    let newCardId = null;
+    if(childKey && parent){
+      const existing = CARDS.find(c=>c.parentId===parent.id && normalizeCardKey(c.num)===childKey);
+      if(existing){
+        newCardId = existing.id;
+      } else {
+        const newChild = {id:cid++, num:childKey, name:empName||childKey, type:'personal', employee:empName, dept:parent.dept||'', parentId:parent.id};
+        CARDS.push(newChild);
+        newCardId = newChild.id;
+        addedCount++;
+      }
+    } else if(parent){
+      newCardId = parent.id;
+      addedCount++;
+    }
+
+    if(newCardId){
+      // Reconstruct comboKey — try both separator styles
+      const comboKey = parentKey+'|'+childKey;
+      _cardMatchMap[comboKey] = newCardId;
+
+      // Rebuild selects and update
+      renderCardTree(); populateCardSelects(); populateUploadCardSel();
+
+      // Update this specific select's value
+      const sysOpts='<option value="">-- Select Card --</option>'+
+        CARDS.filter(c=>!c.parentId).map(p=>{
+          const children=CARDS.filter(c=>c.parentId===p.id);
+          let opts=`<optgroup label="Parent: ****${p.num} — ${p.name||p.dept||'—'}">`;
+          opts+=`<option value="${p.id}">  ****${p.num} (Parent only)</option>`;
+          children.forEach(ch=>{opts+=`<option value="${ch.id}">  ****${ch.num} — ${ch.employee||'—'} (Child)</option>`;});
+          opts+='</optgroup>';
+          return opts;
+        }).join('');
+      sel.innerHTML=sysOpts;
+      sel.value=newCardId;
+
+      // Update status badge
+      const statusSpan = wrapper.querySelector('span[style*="color:var(--warn)"], span[style*="color:var(--ok)"]');
+      if(statusSpan) statusSpan.innerHTML='<span style="color:var(--ok);font-size:10px;font-family:var(--mono)">✓ Added</span>';
+
+      // Green border on input
+      if(empInp) empInp.style.borderColor='var(--ok)';
+    }
+  });
+
+  if(addedCount>0){
+    // Show brief confirmation in modal
+    const btn = document.querySelector('[onclick="addAllUnmatched()"]');
+    if(btn){ btn.textContent='✓ '+addedCount+' cards added'; btn.style.background='rgba(96,255,176,.12)'; btn.style.color='var(--ok)'; btn.style.borderColor='rgba(96,255,176,.3)'; }
+  } else {
+    alert('All cards are already matched or no unmatched cards found.');
+  }
+}
+
+// Override refresh to also update manual card select
+const _origRefresh=refresh;
+refresh=function(){_origRefresh();populateManualCardSel();};
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     FIREBASE DATABASE INTEGRATION
+     Setup karne ke liye:
+     1. https://console.firebase.google.com/ pe jao
+     2. "Add project" → project naam dalo (e.g. "expense-portal")
+     3. Realtime Database → Create database → Start in TEST mode
+     4. Project Settings → Your apps → Add app (Web) → Config copy karo
+     5. Neeche FIREBASE_CONFIG ki values replace karo apni config se
+     ════════════════════════════════════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ══════════════════════════════════════════════════════════════════════
+// ⚠️  APNI FIREBASE CONFIG YAHAN DAALO  ⚠️
+// ══════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDg1zj1sti5aJdEu174ELG3MCmyecNYYqM",
+  authDomain: "cc-expense-management.firebaseapp.com",
+  databaseURL: "https://cc-expense-management-default-rtdb.firebaseio.com",
+  projectId: "cc-expense-management",
+  storageBucket: "cc-expense-management.firebasestorage.app",
+  messagingSenderId: "554164383261",
+  appId: "1:554164383261:web:06361d9d1612569e36e0f4",
+  measurementId: "G-XZX8F1DC57"
+};
+// ══════════════════════════════════════════════════════════════════════
+
+// ─── DB STATUS BAR ────────────────────────────────────────────────────
+const DB_WORKSPACE = 'default'; // Multiple teams? Change this per team
+
+function createDbStatusBar(){
+  const bar = document.createElement('div');
+  bar.id = 'db-status-bar';
+  bar.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;z-index:999;
+    background:#13131a;border-top:1px solid #2e2e3d;
+    padding:5px 16px;display:flex;align-items:center;gap:10px;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9898b8;
+  `;
+  bar.innerHTML = `
+    <span id="db-dot" style="width:7px;height:7px;border-radius:50%;background:#5a5a78;display:inline-block"></span>
+    <span id="db-msg">Firebase: Connecting...</span>
+    <span id="db-last" style="margin-left:auto;color:#5a5a78"></span>
+    <button onclick="window._dbForceSave()" style="
+      padding:2px 10px;border-radius:5px;font-size:9px;font-weight:600;cursor:pointer;
+      border:1px solid #3d3d52;background:transparent;color:#9898b8;font-family:inherit;
+      transition:all .15s" onmouseover="this.style.color='#a8ff60';this.style.borderColor='#a8ff60'"
+      onmouseout="this.style.color='#9898b8';this.style.borderColor='#3d3d52'">↑ Save Now</button>
+  `;
+  document.body.appendChild(bar);
+}
+createDbStatusBar();
+
+function dbStatus(msg, type){
+  const dot = document.getElementById('db-dot');
+  const msgEl = document.getElementById('db-msg');
+  if(!dot||!msgEl) return;
+  const colors = {ok:'#a8ff60', err:'#ff6088', warn:'#ffb840', idle:'#5a5a78', sync:'#60a8ff'};
+  dot.style.background = colors[type]||colors.idle;
+  msgEl.textContent = 'Firebase: ' + msg;
+}
+function dbLastSaved(){
+  const el = document.getElementById('db-last');
+  if(el) el.textContent = 'Last saved: ' + new Date().toLocaleTimeString();
+}
+
+// ─── INIT FIREBASE ────────────────────────────────────────────────────
+let db, dbApp;
+let _saveTimer = null;
+let _fbLoaded = false;
+const WS = DB_WORKSPACE;
+
+try {
+  dbApp = initializeApp(FIREBASE_CONFIG);
+  db = getDatabase(dbApp);
+  dbStatus('Connected ✓', 'ok');
+
+  // ─── LOAD DATA ON START ─────────────────────────────────────────────
+  async function loadFromFirebase(){
+    dbStatus('Loading data...', 'sync');
+    try {
+      const snap = await get(ref(db, WS+'/state'));
+      if(snap.exists()){
+        const data = snap.val();
+
+        if(data.CARDS && Array.isArray(data.CARDS)){
+          window.CARDS = data.CARDS;
+          window.cid = Math.max(...data.CARDS.map(c=>c.id), 0) + 1;
+        }
+        if(data.TXN && Array.isArray(data.TXN)){
+          window.TXN = data.TXN;
+          window.nid = Math.max(...data.TXN.map(t=>parseInt((t.txnId||'0').split('-').pop())||0), 0) + 1;
+        }
+        if(data.BANKS && Array.isArray(data.BANKS)){
+          window.BANKS = data.BANKS;
+          window.bid = Math.max(...data.BANKS.map(b=>b.id), 0) + 1;
+        }
+        if(data.PAYMENTS && Array.isArray(data.PAYMENTS)){
+          window.PAYMENTS = data.PAYMENTS;
+          window.pyid = Math.max(...data.PAYMENTS.map(p=>p.id), 0) + 1;
+        }
+        if(data.COA && Array.isArray(data.COA)) window.COA = data.COA;
+        if(data.AX && Array.isArray(data.AX)) window.AX = data.AX;
+        if(data.DUE_DATES) window.DUE_DATES = data.DUE_DATES;
+        if(data.CUR) window.CUR = data.CUR;
+        if(data.selectedFields && Array.isArray(data.selectedFields)) window.selectedFields = data.selectedFields;
+        if(data.PDFkw) window.PDFkw = data.PDFkw;
+
+        dbStatus('Data loaded ✓', 'ok');
+        console.log('[Firebase] Loaded:', data.TXN?.length||0, 'txns,', data.CARDS?.length||0, 'cards');
+      } else {
+        dbStatus('No data found — Fresh start', 'warn');
+      }
+
+      _fbLoaded = true;
+      // Re-render everything after load
+      if(typeof refresh === 'function') refresh();
+      if(typeof renderCardTree === 'function') renderCardTree();
+      if(typeof populateCardSelects === 'function') populateCardSelects();
+      if(typeof renderCOAList === 'function'){
+        // Only render settings views if currently active
+        const settingsView = document.getElementById('v-settings');
+        if(settingsView && settingsView.classList.contains('on')){
+          renderCOAList(); renderBankList(); renderCardBankAssign(); updateCurrencyPreview(); populateBankSelects();
+        }
+      }
+      // Re-render card progress
+      if(typeof renderCardProgress === 'function') renderCardProgress();
+
+    } catch(err){
+      dbStatus('Load error: ' + err.message, 'err');
+      console.error('[Firebase] Load error:', err);
+      _fbLoaded = true;
+    }
+  }
+  loadFromFirebase();
+
+  // ─── SAVE TO FIREBASE ────────────────────────────────────────────────
+  function saveToFirebase(){
+    if(!db || !_fbLoaded) return;
+    dbStatus('Saving...', 'sync');
+    const state = {
+      CARDS: window.CARDS||[],
+      TXN: window.TXN||[],
+      BANKS: window.BANKS||[],
+      PAYMENTS: window.PAYMENTS||[],
+      COA: window.COA||[],
+      AX: window.AX||[],
+      DUE_DATES: window.DUE_DATES||{},
+      CUR: window.CUR||{symbol:'PKR',name:'PKR',decimals:2},
+      selectedFields: window.selectedFields||[],
+      PDFkw: window.PDFkw||{},
+      _savedAt: new Date().toISOString()
+    };
+    set(ref(db, WS+'/state'), state)
+      .then(()=>{ dbStatus('Saved ✓', 'ok'); dbLastSaved(); })
+      .catch(e=>{ dbStatus('Save failed: '+e.message, 'err'); });
+  }
+
+  // Debounced auto-save (waits 1.5s after last change)
+  function scheduleSave(){
+    if(!_fbLoaded) return;
+    if(_saveTimer) clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveToFirebase, 1500);
+  }
+
+  // Manual save button
+  window._dbForceSave = function(){
+    if(_saveTimer) clearTimeout(_saveTimer);
+    saveToFirebase();
+  };
+
+  // ─── INTERCEPT ALL DATA MUTATIONS ────────────────────────────────────
+  // We patch the key functions that modify state to trigger auto-save
+
+  const _patchFns = [
+    'addParentCard','addChildCard','manualAdd','confirmImport',
+    'applyCardMatch','saveReviewRow','addPayment','deletePayment',
+    'saveCOA','deleteCOA','saveBank','deleteBank','saveCardBank',
+    'savePDFKeywords','saveCurrencySettings','addAllUnmatched',
+    'handleCardFile'
+  ];
+
+  // Wait for DOM + scripts to settle, then patch
+  setTimeout(()=>{
+    _patchFns.forEach(fnName=>{
+      if(typeof window[fnName] === 'function'){
+        const orig = window[fnName];
+        window[fnName] = function(){
+          const result = orig.apply(this, arguments);
+          scheduleSave();
+          return result;
+        };
+      }
+    });
+
+    // Also patch the clear-all button behavior
+    const clearBtn = document.querySelector('[onclick*="TXN=[];nid=1;refresh()"]');
+    if(clearBtn){
+      const origOnclick = clearBtn.getAttribute('onclick');
+      clearBtn.setAttribute('onclick', origOnclick + ';window._dbForceSave();');
+    }
+
+    // Patch "Save & Done" buttons in review (they call saveReviewRow)
+    // Already covered above via saveReviewRow patch
+
+    console.log('[Firebase] Auto-save patches applied ✓');
+  }, 500);
+
+} catch(err){
+  const isConfigError = FIREBASE_CONFIG.apiKey === 'APNI_API_KEY_YAHAN';
+  if(isConfigError){
+    dbStatus('⚠ Config nahi daali — Setup karo neeche diye steps se', 'warn');
+  } else {
+    dbStatus('Init error: ' + err.message, 'err');
+  }
+  console.error('[Firebase] Init error:', err);
+  window._dbForceSave = ()=>alert('Firebase connected nahi hai. Config check karo.');
+}
+</script>
+
+<!-- Setup Guide Modal (shown on first load if config not set) -->
+<script>
+window.addEventListener('load', function(){
+  const cfg = document.querySelector('script[type="module"]');
+  if(cfg && cfg.textContent.includes('APNI_API_KEY_YAHAN')){
+    // Show setup guide in status bar area
+    setTimeout(()=>{
+      const bar = document.getElementById('db-status-bar');
+      if(bar){
+        bar.innerHTML += `
+          <span style="color:#ffb840;margin-left:8px;cursor:pointer;text-decoration:underline"
+            onclick="document.getElementById('firebase-setup-guide').style.display='flex'">
+            📋 Setup Guide dekhein
+          </span>`;
+      }
+      // Create setup guide overlay
+      const guide = document.createElement('div');
+      guide.id = 'firebase-setup-guide';
+      guide.style.cssText = `
+        display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;
+        align-items:center;justify-content:center;`;
+      guide.innerHTML = `
+        <div style="background:#13131a;border:1px solid #3d3d52;border-radius:12px;padding:28px;
+          width:92%;max-width:560px;font-family:'IBM Plex Mono',monospace;max-height:88vh;overflow-y:auto">
+          <div style="font-size:16px;font-weight:700;color:#eeeef8;margin-bottom:4px">🔥 Firebase Setup Guide</div>
+          <div style="font-size:10px;color:#9898b8;margin-bottom:18px">Ek baar karo — hamesha ke liye free database</div>
+
+          <div style="font-size:11px;color:#9898b8;line-height:1.9">
+            <div style="color:#a8ff60;font-weight:600;margin-bottom:6px">Step 1 — Firebase Account</div>
+            <div>→ <a href="https://console.firebase.google.com" target="_blank"
+              style="color:#60a8ff">console.firebase.google.com</a> pe jao</div>
+            <div>→ "Add project" click karo</div>
+            <div>→ Project ka naam dalo (e.g. <span style="color:#eeeef8">expense-portal</span>)</div>
+            <div>→ Google Analytics: OFF kar do (optional)</div>
+            <div style="color:#a8ff60;font-weight:600;margin:12px 0 6px">Step 2 — Realtime Database</div>
+            <div>→ Left menu: <span style="color:#eeeef8">Build → Realtime Database</span></div>
+            <div>→ "Create Database" click karo</div>
+            <div>→ Location: any (us-central1 theek hai)</div>
+            <div>→ <span style="color:#ffb840">Start in TEST mode</span> select karo → Enable</div>
+            <div style="color:#a8ff60;font-weight:600;margin:12px 0 6px">Step 3 — Config Copy Karo</div>
+            <div>→ Left menu: ⚙️ Project Settings</div>
+            <div>→ "Your apps" section → Web app icon ( &lt;/&gt; ) click karo</div>
+            <div>→ App register karo (naam kuch bhi)</div>
+            <div>→ <span style="color:#eeeef8">firebaseConfig</span> object copy karo</div>
+            <div style="color:#a8ff60;font-weight:600;margin:12px 0 6px">Step 4 — HTML File Edit Karo</div>
+            <div>→ Yeh HTML file kisi bhi text editor mein kholo</div>
+            <div>→ <span style="color:#ff6088">APNI_API_KEY_YAHAN</span> wali line dhundo</div>
+            <div>→ Puri <span style="color:#eeeef8">FIREBASE_CONFIG</span> replace karo apni config se</div>
+            <div>→ Save karo → File dobara kholo ✓</div>
+            <div style="margin-top:12px;padding:10px;background:rgba(96,255,176,.07);
+              border:1px solid rgba(96,255,176,.2);border-radius:6px;color:#50e8a0;font-size:10px">
+              ✓ Free plan (Spark): 1GB storage, 10GB/month transfer — kafi hai<br>
+              ✓ Koi server nahi, koi hosting nahi — sirf file kholo<br>
+              ✓ Sab devices sync hote hain automatically
+            </div>
+          </div>
+          <button onclick="document.getElementById('firebase-setup-guide').style.display='none'"
+            style="margin-top:18px;padding:8px 20px;background:#a8ff60;color:#0a0a0d;
+            border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:11px">
+            Samajh gaya, band karo
+          </button>
+        </div>`;
+      document.body.appendChild(guide);
+    }, 800);
+  }
+});
+</script>
+</body>
+</html>
