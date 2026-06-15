@@ -878,9 +878,9 @@ input[type=file]{display:none}
 // ══════════════════════════════════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════════════════════════════════
-let TXN = [];
-let CARDS = []; // { id, num, name, type, employee, dept, parentId }
-let nid = 1, cid = 1;
+var TXN = window.TXN = [];
+var CARDS = window.CARDS = []; // { id, num, name, type, employee, dept, parentId }
+var nid = window.nid = 1, cid = window.cid = 1;
 
 // ── ID & DUPLICATE HELPERS ──
 function makeTxnId(cardId, stmtMonth){
@@ -916,8 +916,8 @@ function findDuplicatesInBatch(rows){
 }
 
 let parsedRows = [], sheetData = null;
-let AX = ['Invoice Created in AX','Payment Created in AX','Journal Posted',''];
-let COA = [
+var AX = window.AX = ['Invoice Created in AX','Payment Created in AX','Journal Posted',''];
+var COA = window.COA = [
   {code:'5100',name:'Office Supplies',cat:'expense'},
   {code:'5200',name:'Travel & Conveyance',cat:'expense'},
   {code:'5300',name:'Entertainment',cat:'expense'},
@@ -929,12 +929,12 @@ let COA = [
   {code:'5900',name:'Miscellaneous Expense',cat:'expense'},
 ];
 let PDFkw = {date:'date',amt:'amount',desc:'description',card:'card'};
-let BANKS = []; // {id, name, acc, title}
-let PAYMENTS = []; // {id, cardId, stmtMonth, amount, totalAmount, diffReason, date, bankId, ref, notes, paidAt}
-let DUE_DATES = {}; // { "cardId|stmtMonth": "YYYY-MM-DD" } — due date per parent card per statement month
-let bid = 1; // bank id counter
-let pyid = 1; // payment id counter
-let CUR = {symbol:'$', name:'USD', decimals:2};
+var BANKS = window.BANKS = []; // {id, name, acc, title}
+var PAYMENTS = window.PAYMENTS = []; // {id, cardId, stmtMonth, amount, totalAmount, diffReason, date, bankId, ref, notes, paidAt}
+var DUE_DATES = window.DUE_DATES = {}; // { "cardId|stmtMonth": "YYYY-MM-DD" } — due date per parent card per statement month
+var bid = window.bid = 1; // bank id counter
+var pyid = window.pyid = 1; // payment id counter
+var CUR = window.CUR = {symbol:'PKR', name:'PKR', decimals:2};
 let ADMIN_MODE = false; // Set to true only when admin logs in
 const ADMIN_PASSWORD = 'admin123'; // Change this to your desired password
 
@@ -964,7 +964,7 @@ const ALLFIELDS = [
   {key:'ax3',label:'AX: Field 4'},
   {key:'status',label:'Status'},
 ];
-let selectedFields = ['sno','date','txnMonth','merchant','amount','cardType','parentCard','childCard','employee','dept','market','location','uids','person','invoice','coa','comments','ax0','ax1','status'];
+var selectedFields = window.selectedFields = ['sno','date','txnMonth','merchant','amount','cardType','parentCard','childCard','employee','dept','market','location','uids','person','invoice','coa','comments','ax0','ax1','status'];
 
 // ══════════════════════════════════════════════════════════════════════
 // NAV
