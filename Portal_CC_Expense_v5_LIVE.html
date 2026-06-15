@@ -3548,19 +3548,28 @@ try {
   };
 
   // ─── INTERCEPT ALL DATA MUTATIONS ────────────────────────────────────
-  // We patch the key functions that modify state to trigger auto-save
-
-  const _patchFns = [
-    'addParentCard','addChildCard','manualAdd','confirmImport',
-    'applyCardMatch','saveReviewRow','addPayment','deletePayment',
-    'saveCOA','deleteCOA','saveBank','deleteBank','saveCardBank',
-    'savePDFKeywords','saveCurrencySettings','addAllUnmatched',
-    'handleCardFile'
-  ];
-
-  // Wait for DOM + scripts to settle, then patch
+  // Patch refresh() — yeh har data change ke baad call hota hai
   setTimeout(()=>{
-    _patchFns.forEach(fnName=>{
+    // Patch the global refresh function — called after EVERY data change
+    if(typeof window.refresh === 'function'){
+      const _origRefresh2 = window.refresh;
+      window.refresh = function(){
+        const result = _origRefresh2.apply(this, arguments);
+        scheduleSave();
+        return result;
+      };
+      console.log('[Firebase] refresh() patched for auto-save ✓');
+    }
+
+    // Also patch specific functions as backup
+    const _patchFns2 = [
+      'addParentCard','addChildCard','manualAdd','confirmImport',
+      'applyCardMatch','saveReviewRow','addPayment','deletePayment',
+      'saveCOA','deleteCOA','saveBank','deleteBank','saveCardBank',
+      'savePDFKeywords','saveCurrencySettings','addAllUnmatched',
+      'handleCardFile'
+    ];
+    _patchFns2.forEach(fnName=>{
       if(typeof window[fnName] === 'function'){
         const orig = window[fnName];
         window[fnName] = function(){
@@ -3571,18 +3580,15 @@ try {
       }
     });
 
-    // Also patch the clear-all button behavior
+    // Patch clear-all button
     const clearBtn = document.querySelector('[onclick*="TXN=[];nid=1;refresh()"]');
     if(clearBtn){
       const origOnclick = clearBtn.getAttribute('onclick');
       clearBtn.setAttribute('onclick', origOnclick + ';window._dbForceSave();');
     }
 
-    // Patch "Save & Done" buttons in review (they call saveReviewRow)
-    // Already covered above via saveReviewRow patch
-
     console.log('[Firebase] Auto-save patches applied ✓');
-  }, 500);
+  }, 800);
 
 } catch(err){
   const isConfigError = FIREBASE_CONFIG.apiKey === 'APNI_API_KEY_YAHAN';
