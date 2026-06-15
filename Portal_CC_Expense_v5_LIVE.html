@@ -3388,140 +3388,62 @@ refresh=function(){
      4. Project Settings → Your apps → Add app (Web) → Config copy karo
      5. Neeche FIREBASE_CONFIG ki values replace karo apni config se
      ════════════════════════════════════════════════════════════════════ -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, get, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+<script>
+// ════════════════════════════════════════════════════════════════════
+// FIREBASE DATABASE — GLOBAL SCRIPT (non-module for full window access)
+// ════════════════════════════════════════════════════════════════════
 
-// ══════════════════════════════════════════════════════════════════════
-// ⚠️  APNI FIREBASE CONFIG YAHAN DAALO  ⚠️
-// ══════════════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDg1zj1sti5aJdEu174ELG3MCmyecNYYqM",
-  authDomain: "cc-expense-management.firebaseapp.com",
-  databaseURL: "https://cc-expense-management-default-rtdb.firebaseio.com",
-  projectId: "cc-expense-management",
-  storageBucket: "cc-expense-management.firebasestorage.app",
-  messagingSenderId: "554164383261",
-  appId: "1:554164383261:web:06361d9d1612569e36e0f4",
-  measurementId: "G-XZX8F1DC57"
-};
-// ══════════════════════════════════════════════════════════════════════
-
-// ─── DB STATUS BAR ────────────────────────────────────────────────────
-const DB_WORKSPACE = 'default'; // Multiple teams? Change this per team
-
-function createDbStatusBar(){
-  const bar = document.createElement('div');
-  bar.id = 'db-status-bar';
-  bar.style.cssText = `
-    position:fixed;bottom:0;left:0;right:0;z-index:999;
-    background:#13131a;border-top:1px solid #2e2e3d;
-    padding:5px 16px;display:flex;align-items:center;gap:10px;
-    font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9898b8;
-  `;
-  bar.innerHTML = `
-    <span id="db-dot" style="width:7px;height:7px;border-radius:50%;background:#5a5a78;display:inline-block"></span>
-    <span id="db-msg">Firebase: Connecting...</span>
-    <span id="db-last" style="margin-left:auto;color:#5a5a78"></span>
-    <button onclick="window._dbForceSave()" style="
-      padding:2px 10px;border-radius:5px;font-size:9px;font-weight:600;cursor:pointer;
-      border:1px solid #3d3d52;background:transparent;color:#9898b8;font-family:inherit;
-      transition:all .15s" onmouseover="this.style.color='#a8ff60';this.style.borderColor='#a8ff60'"
-      onmouseout="this.style.color='#9898b8';this.style.borderColor='#3d3d52'">↑ Save Now</button>
-  `;
-  document.body.appendChild(bar);
-}
-createDbStatusBar();
-
-function dbStatus(msg, type){
-  const dot = document.getElementById('db-dot');
-  const msgEl = document.getElementById('db-msg');
-  if(!dot||!msgEl) return;
-  const colors = {ok:'#a8ff60', err:'#ff6088', warn:'#ffb840', idle:'#5a5a78', sync:'#60a8ff'};
-  dot.style.background = colors[type]||colors.idle;
-  msgEl.textContent = 'Firebase: ' + msg;
-}
-function dbLastSaved(){
-  const el = document.getElementById('db-last');
-  if(el) el.textContent = 'Last saved: ' + new Date().toLocaleTimeString();
-}
-
-// ─── INIT FIREBASE ────────────────────────────────────────────────────
-let db, dbApp;
-let _saveTimer = null;
-let _fbLoaded = false;
-const WS = DB_WORKSPACE;
-
-try {
-  dbApp = initializeApp(FIREBASE_CONFIG);
-  db = getDatabase(dbApp);
-  dbStatus('Connected ✓', 'ok');
-
-  // ─── LOAD DATA ON START ─────────────────────────────────────────────
-  async function loadFromFirebase(){
-    dbStatus('Loading data...', 'sync');
-    try {
-      const snap = await get(ref(db, WS+'/state'));
-      if(snap.exists()){
-        const data = snap.val();
-
-        if(data.CARDS && Array.isArray(data.CARDS)){
-          window.CARDS = data.CARDS;
-          window.cid = Math.max(...data.CARDS.map(c=>c.id), 0) + 1;
-        }
-        if(data.TXN && Array.isArray(data.TXN)){
-          window.TXN = data.TXN;
-          window.nid = Math.max(...data.TXN.map(t=>parseInt((t.txnId||'0').split('-').pop())||0), 0) + 1;
-        }
-        if(data.BANKS && Array.isArray(data.BANKS)){
-          window.BANKS = data.BANKS;
-          window.bid = Math.max(...data.BANKS.map(b=>b.id), 0) + 1;
-        }
-        if(data.PAYMENTS && Array.isArray(data.PAYMENTS)){
-          window.PAYMENTS = data.PAYMENTS;
-          window.pyid = Math.max(...data.PAYMENTS.map(p=>p.id), 0) + 1;
-        }
-        if(data.COA && Array.isArray(data.COA)) window.COA = data.COA;
-        if(data.AX && Array.isArray(data.AX)) window.AX = data.AX;
-        if(data.DUE_DATES) window.DUE_DATES = data.DUE_DATES;
-        if(data.CUR) window.CUR = data.CUR;
-        if(data.selectedFields && Array.isArray(data.selectedFields)) window.selectedFields = data.selectedFields;
-        if(data.PDFkw) window.PDFkw = data.PDFkw;
-
-        dbStatus('Data loaded ✓', 'ok');
-        console.log('[Firebase] Loaded:', data.TXN?.length||0, 'txns,', data.CARDS?.length||0, 'cards');
-      } else {
-        dbStatus('No data found — Fresh start', 'warn');
-      }
-
-      _fbLoaded = true;
-      // Re-render everything after load
-      if(typeof refresh === 'function') refresh();
-      if(typeof renderCardTree === 'function') renderCardTree();
-      if(typeof populateCardSelects === 'function') populateCardSelects();
-      if(typeof renderCOAList === 'function'){
-        // Only render settings views if currently active
-        const settingsView = document.getElementById('v-settings');
-        if(settingsView && settingsView.classList.contains('on')){
-          renderCOAList(); renderBankList(); renderCardBankAssign(); updateCurrencyPreview(); populateBankSelects();
-        }
-      }
-      // Re-render card progress
-      if(typeof renderCardProgress === 'function') renderCardProgress();
-
-    } catch(err){
-      dbStatus('Load error: ' + err.message, 'err');
-      console.error('[Firebase] Load error:', err);
-      _fbLoaded = true;
-    }
+// Dynamically load Firebase SDK then init
+(function(){
+  function loadScript(src, cb){
+    var s=document.createElement('script');
+    s.src=src;
+    s.onload=cb;
+    document.head.appendChild(s);
   }
-  loadFromFirebase();
 
-  // ─── SAVE TO FIREBASE ────────────────────────────────────────────────
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDg1zj1sti5aJdEu174ELG3MCmyecNYYqM",
+    authDomain: "cc-expense-management.firebaseapp.com",
+    databaseURL: "https://cc-expense-management-default-rtdb.firebaseio.com",
+    projectId: "cc-expense-management",
+    storageBucket: "cc-expense-management.firebasestorage.app",
+    messagingSenderId: "554164383261",
+    appId: "1:554164383261:web:06361d9d1612569e36e0f4"
+  };
+
+  var WS = 'default';
+  var _saveTimer = null;
+  var _fbLoaded = false;
+
+  // ─── STATUS BAR ──────────────────────────────────────────────────
+  function createDbStatusBar(){
+    var bar = document.createElement('div');
+    bar.id = 'db-status-bar';
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:999;background:#13131a;border-top:1px solid #2e2e3d;padding:5px 16px;display:flex;align-items:center;gap:10px;font-family:IBM Plex Mono,monospace;font-size:10px;color:#9898b8;';
+    bar.innerHTML = '<span id="db-dot" style="width:7px;height:7px;border-radius:50%;background:#5a5a78;display:inline-block"></span><span id="db-msg">Firebase: Loading SDK...</span><span id="db-last" style="margin-left:auto;color:#5a5a78"></span><button onclick="window._dbForceSave()" style="padding:2px 10px;border-radius:5px;font-size:9px;font-weight:600;cursor:pointer;border:1px solid #3d3d52;background:transparent;color:#9898b8;font-family:inherit">&#8593; Save Now</button>';
+    document.body.appendChild(bar);
+  }
+  createDbStatusBar();
+
+  function dbStatus(msg, type){
+    var dot=document.getElementById('db-dot');
+    var msgEl=document.getElementById('db-msg');
+    if(!dot||!msgEl) return;
+    var colors={ok:'#a8ff60',err:'#ff6088',warn:'#ffb840',idle:'#5a5a78',sync:'#60a8ff'};
+    dot.style.background=colors[type]||colors.idle;
+    msgEl.textContent='Firebase: '+msg;
+  }
+  function dbLastSaved(){
+    var el=document.getElementById('db-last');
+    if(el) el.textContent='Last saved: '+new Date().toLocaleTimeString();
+  }
+
+  // ─── SAVE ────────────────────────────────────────────────────────
   function saveToFirebase(){
-    if(!db || !_fbLoaded) return;
-    dbStatus('Saving...', 'sync');
-    const state = {
+    if(!window._fbDB || !_fbLoaded) return;
+    dbStatus('Saving...','sync');
+    var state={
       CARDS: window.CARDS||[],
       TXN: window.TXN||[],
       BANKS: window.BANKS||[],
@@ -3529,84 +3451,73 @@ try {
       COA: window.COA||[],
       AX: window.AX||[],
       DUE_DATES: window.DUE_DATES||{},
-      CUR: window.CUR||{symbol:'PKR',name:'PKR',decimals:2},
+      CUR: window.CUR||{},
       selectedFields: window.selectedFields||[],
       PDFkw: window.PDFkw||{},
       _savedAt: new Date().toISOString()
     };
-    set(ref(db, WS+'/state'), state)
-      .then(()=>{ dbStatus('Saved ✓', 'ok'); dbLastSaved(); })
-      .catch(e=>{ dbStatus('Save failed: '+e.message, 'err'); });
+    window._fbDB.ref(WS+'/state').set(state)
+      .then(function(){ dbStatus('Saved ✓','ok'); dbLastSaved(); })
+      .catch(function(e){ dbStatus('Save failed: '+e.message,'err'); console.error('[Firebase] Save error:',e); });
   }
 
-  // Debounced auto-save (waits 1.5s after last change)
   function scheduleSave(){
     if(!_fbLoaded) return;
     if(_saveTimer) clearTimeout(_saveTimer);
     _saveTimer = setTimeout(saveToFirebase, 1500);
   }
-  // Expose to window so non-module scripts can trigger save
+
+  // Expose globally
   window._fbScheduleSave = scheduleSave;
+  window._dbForceSave = function(){ if(_saveTimer) clearTimeout(_saveTimer); saveToFirebase(); };
 
-  // Manual save button
-  window._dbForceSave = function(){
-    if(_saveTimer) clearTimeout(_saveTimer);
-    saveToFirebase();
-  };
+  // ─── LOAD Firebase compat SDK ────────────────────────────────────
+  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', function(){
+    loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', function(){
+      try {
+        var app = firebase.initializeApp(FIREBASE_CONFIG);
+        window._fbDB = firebase.database();
+        dbStatus('Connected ✓','ok');
 
-  // ─── INTERCEPT ALL DATA MUTATIONS ────────────────────────────────────
-  // Patch refresh() — yeh har data change ke baad call hota hai
-  setTimeout(()=>{
-    // Patch the global refresh function — called after EVERY data change
-    if(typeof window.refresh === 'function'){
-      const _origRefresh2 = window.refresh;
-      window.refresh = function(){
-        const result = _origRefresh2.apply(this, arguments);
-        scheduleSave();
-        return result;
-      };
-      console.log('[Firebase] refresh() patched for auto-save ✓');
-    }
+        // ─── LOAD DATA ─────────────────────────────────────────────
+        window._fbDB.ref(WS+'/state').once('value').then(function(snap){
+          if(snap.exists()){
+            var data = snap.val();
+            if(data.CARDS && Array.isArray(data.CARDS)){ window.CARDS=data.CARDS; window.cid=Math.max.apply(null,data.CARDS.map(function(c){return c.id;}).concat([0]))+1; }
+            if(data.TXN && Array.isArray(data.TXN)){ window.TXN=data.TXN; }
+            if(data.BANKS && Array.isArray(data.BANKS)){ window.BANKS=data.BANKS; window.bid=Math.max.apply(null,data.BANKS.map(function(b){return b.id;}).concat([0]))+1; }
+            if(data.PAYMENTS && Array.isArray(data.PAYMENTS)){ window.PAYMENTS=data.PAYMENTS; window.pyid=Math.max.apply(null,data.PAYMENTS.map(function(p){return p.id;}).concat([0]))+1; }
+            if(data.COA && Array.isArray(data.COA)) window.COA=data.COA;
+            if(data.AX && Array.isArray(data.AX)) window.AX=data.AX;
+            if(data.DUE_DATES) window.DUE_DATES=data.DUE_DATES;
+            if(data.CUR) window.CUR=data.CUR;
+            if(data.selectedFields) window.selectedFields=data.selectedFields;
+            if(data.PDFkw) window.PDFkw=data.PDFkw;
+            dbStatus('Data loaded ✓','ok');
+            console.log('[Firebase] Loaded:',window.TXN.length,'txns,',window.CARDS.length,'cards');
+          } else {
+            dbStatus('No data yet — Fresh start','warn');
+            console.log('[Firebase] Empty database');
+          }
+          _fbLoaded = true;
+          if(typeof refresh==='function') refresh();
+          if(typeof renderCardTree==='function') renderCardTree();
+          if(typeof populateCardSelects==='function') populateCardSelects();
+          if(typeof renderCardProgress==='function') renderCardProgress();
+        }).catch(function(e){
+          dbStatus('Load error: '+e.message,'err');
+          console.error('[Firebase] Load error:',e);
+          _fbLoaded=true;
+        });
 
-    // Also patch specific functions as backup
-    const _patchFns2 = [
-      'addParentCard','addChildCard','manualAdd','confirmImport',
-      'applyCardMatch','saveReviewRow','addPayment','deletePayment',
-      'saveCOA','deleteCOA','saveBank','deleteBank','saveCardBank',
-      'savePDFKeywords','saveCurrencySettings','addAllUnmatched',
-      'handleCardFile'
-    ];
-    _patchFns2.forEach(fnName=>{
-      if(typeof window[fnName] === 'function'){
-        const orig = window[fnName];
-        window[fnName] = function(){
-          const result = orig.apply(this, arguments);
-          scheduleSave();
-          return result;
-        };
+      } catch(e){
+        dbStatus('Init error: '+e.message,'err');
+        console.error('[Firebase] Init error:',e);
       }
     });
+  });
 
-    // Patch clear-all button
-    const clearBtn = document.querySelector('[onclick*="TXN=[];nid=1;refresh()"]');
-    if(clearBtn){
-      const origOnclick = clearBtn.getAttribute('onclick');
-      clearBtn.setAttribute('onclick', origOnclick + ';window._dbForceSave();');
-    }
-
-    console.log('[Firebase] Auto-save patches applied ✓');
-  }, 800);
-
-} catch(err){
-  const isConfigError = FIREBASE_CONFIG.apiKey === 'APNI_API_KEY_YAHAN';
-  if(isConfigError){
-    dbStatus('⚠ Config nahi daali — Setup karo neeche diye steps se', 'warn');
-  } else {
-    dbStatus('Init error: ' + err.message, 'err');
-  }
-  console.error('[Firebase] Init error:', err);
-  window._dbForceSave = ()=>alert('Firebase connected nahi hai. Config check karo.');
-}
+})();
 </script>
 
 <!-- Setup Guide Modal (shown on first load if config not set) -->
