@@ -3369,9 +3369,14 @@ function addAllUnmatched(){
   }
 }
 
-// Override refresh to also update manual card select
+// Override refresh to also update manual card select + trigger Firebase save
 const _origRefresh=refresh;
-refresh=function(){_origRefresh();populateManualCardSel();};
+refresh=function(){
+  _origRefresh();
+  populateManualCardSel();
+  // Trigger Firebase auto-save after every data change
+  if(typeof window._fbScheduleSave === 'function') window._fbScheduleSave();
+};
 </script>
 
 <!-- ════════════════════════════════════════════════════════════════════
@@ -3540,6 +3545,8 @@ try {
     if(_saveTimer) clearTimeout(_saveTimer);
     _saveTimer = setTimeout(saveToFirebase, 1500);
   }
+  // Expose to window so non-module scripts can trigger save
+  window._fbScheduleSave = scheduleSave;
 
   // Manual save button
   window._dbForceSave = function(){
