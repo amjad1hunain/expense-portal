@@ -735,8 +735,8 @@ input[type=file]{display:none}
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 
-    <!-- CURRENCY CARD (new) -->
-    <div class="card">
+    <!-- CURRENCY CARD (hidden - locked to $) -->
+    <div class="card" style="display:none">
       <div class="sl2" style="margin-bottom:10px">Currency Settings</div>
       <div class="fr c2">
         <div class="fg">
@@ -2735,8 +2735,8 @@ function addCOA(){
 }
 
 function saveCurrency(){
-  CUR.symbol=document.getElementById('cur-symbol').value.trim()||'$';
-  CUR.name=document.getElementById('cur-name').value.trim()||'USD';
+  CUR.symbol='$';
+  CUR.name='USD';
   CUR.decimals=parseInt(document.getElementById('cur-decimals').value)||0;
   updateCurrencyPreview();
   const el=document.getElementById('cur-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000);
@@ -3675,7 +3675,7 @@ refresh=function(){
           if(data.COA && Array.isArray(data.COA)) window.COA=data.COA;
           if(data.AX && Array.isArray(data.AX)) window.AX=data.AX;
           if(data.DUE_DATES) window.DUE_DATES=data.DUE_DATES;
-          if(data.CUR) window.CUR=data.CUR;
+          if(data.CUR){window.CUR=data.CUR;window.CUR.symbol='$';window.CUR.name='USD';}
           if(data.selectedFields && Array.isArray(data.selectedFields)) window.selectedFields=data.selectedFields;
           if(data.PDFkw) window.PDFkw=data.PDFkw;
           dbStatus('Loaded ✓ — ' + (window.CARDS||[]).length + ' cards, ' + (window.TXN||[]).length + ' txns', 'ok');
