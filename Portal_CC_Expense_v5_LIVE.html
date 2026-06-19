@@ -2000,6 +2000,13 @@ function populateReviewFilter(){
 }
 
 function renderReview(){
+  // Employee view: force card+month filter
+  if(window._IS_EMPLOYEE_VIEW && window._REVIEW_CARD_ID){
+    const cardFilter2=document.getElementById('rv-card-filter');
+    const monthFilter2=document.getElementById('rv-month-filter');
+    if(cardFilter2) cardFilter2.value=window._REVIEW_CARD_ID;
+    if(monthFilter2&&window._REVIEW_MONTH) monthFilter2.value=window._REVIEW_MONTH;
+  }
   const monthFilter=document.getElementById('rv-month-filter')?.value||'';
   const cardFilter=document.getElementById('rv-card-filter')?.value;
   const statusFilter=document.getElementById('rv-status-filter')?.value;
@@ -2848,6 +2855,70 @@ function loadSample(){
 refresh();
 renderReportFields();
 populateUploadCardSel();
+
+// ── URL PARAM: Employee Review Link Handler ──────────────────────────
+(function(){
+  const params = new URLSearchParams(location.search);
+  const cardParam = params.get('card');
+  const monthParam = params.get('month');
+  if(!cardParam) return; // Normal admin view — do nothing
+
+  // This is a shared review link — lock to employee view
+  window._REVIEW_CARD_ID = parseInt(cardParam);
+  window._REVIEW_MONTH = monthParam || '';
+  window._IS_EMPLOYEE_VIEW = true;
+
+  function applyEmployeeView(){
+    const card = CARDS.find(c=>c.id===window._REVIEW_CARD_ID);
+    if(!card && CARDS.length===0) { setTimeout(applyEmployeeView, 500); return; }
+
+    // Hide nav tabs (show only Review)
+    const nav = document.querySelector('nav');
+    if(nav){
+      // Hide all tabs except Review, hide admin btn
+      document.querySelectorAll('.ntab').forEach(t=>t.style.display='none');
+      document.getElementById('admin-btn').style.display='none';
+      const adminBadge=document.getElementById('admin-badge');
+      if(adminBadge) adminBadge.style.display='none';
+
+      // Show employee name in nav
+      const empLabel = document.createElement('span');
+      empLabel.style.cssText='font-size:11px;font-family:var(--mono);color:var(--acc);margin-left:8px';
+      const cardName = card ? (card.employee||card.name||'****'+card.num) : 'Card '+cardParam;
+      const monthLabel = monthParam ? ' · '+monthParam : '';
+      empLabel.textContent = '👤 '+cardName+monthLabel+' — Employee Review';
+      nav.appendChild(empLabel);
+    }
+
+    // Switch to Review tab
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+    document.getElementById('v-review').classList.add('on');
+
+    // Set filters
+    const cardFilter = document.getElementById('rv-card-filter');
+    const monthFilter = document.getElementById('rv-month-filter');
+    if(cardFilter) cardFilter.value = window._REVIEW_CARD_ID;
+    if(monthFilter && monthParam) monthFilter.value = monthParam;
+
+    // Hide filter controls (employee shouldn't change filters)
+    const filterRow = document.querySelector('#v-review > div[style*="gap:8px"]');
+    if(filterRow) filterRow.style.display='none';
+
+    // Hide Save All + Expand/Collapse buttons — keep only per-row save
+    // (they're inside filterRow so already hidden)
+
+    renderReview();
+  }
+
+  // Wait for DB to load then apply
+  const _origRefreshForEmp = window._fbScheduleSave;
+  const checkReady = setInterval(()=>{
+    if(typeof renderReview === 'function'){
+      clearInterval(checkReady);
+      setTimeout(applyEmployeeView, 800);
+    }
+  }, 200);
+})();
 // Populate manual add card select
 function populateManualCardSel(){
   const el=document.getElementById('m-card-sel');
