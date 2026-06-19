@@ -1349,6 +1349,14 @@ function normMonth(raw){
   return '';
 }
 
+
+function parseAmount(raw){
+  // Handle accounting negative format: (141.05) or $ (141.05) or (141.05)
+  const s=String(raw||'').trim();
+  const isNeg=s.includes('(')&&s.includes(')');
+  const num=parseFloat(s.replace(/[^0-9.]/g,''))||0;
+  return isNeg ? -num : num;
+}
 function normDate(d){
   if(d===null||d===undefined||d==='') return '';
   // If it's a number or numeric string (Excel serial)
@@ -1637,8 +1645,8 @@ function applyCardMatch(){
 
     const dateRaw=_detectedDateCol>=0?String(row[_detectedDateCol]||'').trim():'';
     const desc=_detectedDescCol>=0?String(row[_detectedDescCol]||'').trim():'';
-    const rawAmt=_detectedAmtCol>=0?String(row[_detectedAmtCol]||'').replace(/[^0-9.\-]/g,''):'0';
-    const amt=parseFloat(rawAmt)||0;
+    const rawAmt=_detectedAmtCol>=0?String(row[_detectedAmtCol]||''):'0';
+    const amt=parseAmount(rawAmt);
 
     // Read month from file column if detected, else fallback
     let stmtLabel=fallbackLabel;
@@ -1731,9 +1739,9 @@ function doMap(){
   (sheetData||[]).forEach(row=>{
     const date=dI>=0?String(row[dI]||'').trim():'';
     const desc=mI>=0?String(row[mI]||'').trim():'';
-    const rawAmt=aI>=0?String(row[aI]||'').replace(/[^0-9.\-]/g,''):'0';
+    const rawAmt=aI>=0?String(row[aI]||''):'0';
     const card=cI>=0?String(row[cI]||'').slice(-4):'';
-    const amt=parseFloat(rawAmt)||0;
+    const amt=parseAmount(rawAmt);
     if((date||desc)&&amt!==0)rows.push({date:normDate(date)||date,desc:desc.substring(0,80),amount:amt,card});
   });
   if(!rows.length){showUpWarn('No valid rows found. Check column mapping.','al-w');return;}
