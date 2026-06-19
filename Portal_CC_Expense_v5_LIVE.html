@@ -3472,8 +3472,13 @@ function addAllUnmatched(){
 // DELETE TRANSACTIONS BY PARENT CARD + MONTH
 // ══════════════════════════════════════════════════════════════════════
 function showDeleteByCard(){
-  // Get unique parent cards that have transactions
-  const parents = CARDS.filter(c=>!c.parentId);
+  // Only show parent cards that have transactions (direct or via children)
+  const allParents = CARDS.filter(c=>!c.parentId);
+  const parents = allParents.filter(p=>{
+    const childIds = CARDS.filter(c=>c.parentId===p.id).map(c=>c.id);
+    const allIds = [p.id, ...childIds];
+    return TXN.some(t=>allIds.includes(t.cardId));
+  });
   const months = [...new Set(TXN.map(t=>t.stmtMonth))].sort().reverse();
   
   let opts = parents.map(p=>`<option value="${p.id}">****${p.num} — ${p.name||'—'} (${p.dept||''})</option>`).join('');
@@ -3496,7 +3501,7 @@ function showDeleteByCard(){
       
       <div style="margin-bottom:16px">
         <label style="font-size:11px;color:var(--t2);display:block;margin-bottom:5px">Statement Month (optional — leave blank to delete ALL months)</label>
-        <select id="del-month-sel" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--t1);font-family:var(--mono);font-size:12px">
+        <select id="del-month-sel" onchange="filterDelCardsByMonth(this.value)" style="width:100%;padding:8px;background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--t1);font-family:var(--mono);font-size:12px">
           ${monthOpts}
         </select>
       </div>
@@ -3510,6 +3515,19 @@ function showDeleteByCard(){
       </div>
     </div>`;
   document.body.appendChild(div);
+}
+
+function filterDelCardsByMonth(month){
+  const cardSel = document.getElementById('del-card-sel');
+  if(!cardSel) return;
+  const allParents = CARDS.filter(c=>!c.parentId);
+  const filtered = allParents.filter(p=>{
+    const childIds = CARDS.filter(c=>c.parentId===p.id).map(c=>c.id);
+    const allIds = [p.id,...childIds];
+    return TXN.some(t=>allIds.includes(t.cardId)&&(!month||t.stmtMonth===month));
+  });
+  cardSel.innerHTML = filtered.map(p=>`<option value="${p.id}">****${p.num} — ${p.name||'—'} (${p.dept||''})</option>`).join('');
+  if(!filtered.length) cardSel.innerHTML='<option value="">No cards with data for this month</option>';
 }
 
 function previewDelByCard(){
