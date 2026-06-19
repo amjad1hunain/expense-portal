@@ -1308,7 +1308,7 @@ function pdfToRows(text){
     if(dm&&am){
       const parts=line.split(/\t+/).map(p=>p.trim()).filter(Boolean);
       const amount=parseFloat(am[2].replace(/,/g,''))||0;
-      if(amount<=0) return;
+      if(amount===0) return;
       let desc=parts.filter(p=>!p.match(dateRe)&&!p.match(/^(|Rs\.?)?\s*[\d,]+\.?\d*$/i)&&p.length>1).join(' ').substring(0,80);
       if(!desc) desc=line.replace(dm[0],'').replace(am[0],'').replace(/\t+/g,' ').trim().substring(0,80);
       rows.push({date:normDate(dm[1]),desc:desc.trim(),amount,card:''});
@@ -1648,7 +1648,7 @@ function applyCardMatch(){
       if(parsed) stmtLabel=parsed;
     }
 
-    if((!dateRaw&&!desc)||amt<=0) return;
+    if((!dateRaw&&!desc)||amt===0) return;
 
     const ci=cardId?getCardInfo(cardId):{parentNum:'',childNum:'',employee:'',dept:'',type:'personal'};
     rows.push({
@@ -1734,7 +1734,7 @@ function doMap(){
     const rawAmt=aI>=0?String(row[aI]||'').replace(/[^0-9.\-]/g,''):'0';
     const card=cI>=0?String(row[cI]||'').slice(-4):'';
     const amt=parseFloat(rawAmt)||0;
-    if((date||desc)&&amt>0)rows.push({date:normDate(date)||date,desc:desc.substring(0,80),amount:amt,card});
+    if((date||desc)&&amt!==0)rows.push({date:normDate(date)||date,desc:desc.substring(0,80),amount:amt,card});
   });
   if(!rows.length){showUpWarn('No valid rows found. Check column mapping.','al-w');return;}
   showParsed(rows,'');
@@ -2775,14 +2775,14 @@ function onMCardChange(){
 function manualAdd(){
   const date=document.getElementById('m-date').value;
   const desc=document.getElementById('m-desc').value.trim();
-  const amt=parseFloat(document.getElementById('m-amt').value);
+  const amt=parseFloat(document.getElementById('m-amt').value)||0;
   const selCardId=parseInt(document.getElementById('m-card-sel')?.value)||null;
   const emp=document.getElementById('m-emp').value.trim();
   const dept=document.getElementById('m-dept').value.trim();
   const mo=document.getElementById('m-month')?.value||String(new Date().getMonth()+1).padStart(2,'0');
   const yr=document.getElementById('m-year')?.value||new Date().getFullYear();
   const stmtLabel=yr+'-'+mo;
-  if(!desc||isNaN(amt)||amt<=0){alert('Description and Amount are required.');return;}
+  if(!desc||amt===0){alert('Description and Amount are required.');return;}
   let finalCardId=selCardId;
   if(!finalCardId){
     const card=CARDS[0]||null;
