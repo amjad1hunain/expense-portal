@@ -1881,6 +1881,8 @@ function processEmpUpload(data){
   const ax1I=hdrs.findIndex(h=>h.includes('payment bani')||h.includes('ax: payment')||h.includes('payment created')||(AX[1]&&h.includes(AX[1].toLowerCase())));
   const ax2I=hdrs.findIndex(h=>h.includes('journal')||(AX[2]&&h.includes(AX[2].toLowerCase())));
   const ax3I=hdrs.findIndex(h=>(AX[3]&&h.includes(AX[3].toLowerCase())));
+  const deptI2=hdrs.findIndex(h=>h.includes('department')||h==='dept');
+  const empI2=hdrs.findIndex(h=>h==='employee'||h.includes('employee name'));
 
   let updated=0, skipped=0;
   data.slice(1).forEach(row=>{
@@ -1900,6 +1902,8 @@ function processEmpUpload(data){
     if(invI>=0&&row[invI]) t.rd.invoice=String(row[invI]);
     if(coaI>=0&&row[coaI]) t.rd.coa=String(row[coaI]);
     if(cmtI>=0&&row[cmtI]) t.rd.comments=String(row[cmtI]);
+    if(deptI2>=0&&row[deptI2]) t.dept=String(row[deptI2]);
+    if(empI2>=0&&row[empI2]) t.employee=String(row[empI2]);
     if(ax0I>=0) t.rd.ax0=String(row[ax0I]).toLowerCase()==='yes'||row[ax0I]===true||row[ax0I]==='TRUE';
     if(ax1I>=0) t.rd.ax1=String(row[ax1I]).toLowerCase()==='yes'||row[ax1I]===true||row[ax1I]==='TRUE';
     if(ax2I>=0) t.rd.ax2=String(row[ax2I]).toLowerCase()==='yes'||row[ax2I]===true||row[ax2I]==='TRUE';
@@ -2904,10 +2908,69 @@ populateUploadCardSel();
     const filterRow = document.querySelector('#v-review > div[style*="gap:8px"]');
     if(filterRow) filterRow.style.display='none';
 
-    // Hide Save All + Expand/Collapse buttons — keep only per-row save
-    // (they're inside filterRow so already hidden)
+    // Add export bar above review container
+    const reviewView = document.getElementById('v-review');
+    const existingBar = document.getElementById('emp-export-bar');
+    if(reviewView && !existingBar){
+      const cardName2 = card ? (card.employee||card.name||'****'+card.num) : 'Card';
+      const bar = document.createElement('div');
+      bar.id = 'emp-export-bar';
+      bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 16px;margin-bottom:14px;flex-wrap:wrap;gap:8px';
+      bar.innerHTML = `
+        <div style="font-family:var(--mono);font-size:11px;color:var(--t2)">
+          <span style="color:var(--acc);font-weight:600">${cardName2}</span>
+          ${monthParam ? '<span style="color:var(--t3)"> · '+monthParam+'</span>' : ''}
+          <span style="margin-left:8px" id="emp-txn-count"></span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="empExportCSV()" style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(168,255,96,.3);background:rgba(168,255,96,.1);color:var(--acc);font-family:var(--sans)">⬇ Export CSV</button>
+          <button onclick="empExportExcel()" style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(96,168,255,.3);background:rgba(96,168,255,.1);color:var(--acc2);font-family:var(--sans)">⬇ Export Excel</button>
+          <button onclick="document.getElementById('emp-upload-section').style.display=document.getElementById('emp-upload-section').style.display==='none'?'block':'none'" style="padding:6px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,184,64,.3);background:rgba(255,184,64,.1);color:var(--warn);font-family:var(--sans)">⬆ Upload Filled File</button>
+        </div>`;
+      // Insert before review-container
+      const rc = document.getElementById('review-container');
+      if(rc) reviewView.insertBefore(bar, rc);
+
+      // Add upload section below bar
+      const existingUp = document.getElementById('emp-upload-section');
+      if(!existingUp){
+        const upSec = document.createElement('div');
+        upSec.id = 'emp-upload-section';
+        upSec.style.cssText = 'display:none;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:16px;margin-bottom:14px';
+        upSec.innerHTML = `
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--t2);text-transform:uppercase;font-family:var(--mono);margin-bottom:8px">Upload Filled File</div>
+          <div style="font-size:11px;color:var(--t2);font-family:var(--mono);margin-bottom:10px;line-height:1.6">
+            1. Pehle <span style="color:var(--acc);cursor:pointer;text-decoration:underline" onclick="empExportExcel()">Export Excel</span> karo
+            &nbsp;→&nbsp; 2. Fields fill karo (Market, Location, UIDs, COA, etc.)
+            &nbsp;→&nbsp; 3. Wapas yahan upload karo
+          </div>
+          <div style="border:1.5px dashed var(--b2);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .2s"
+            id="emp-dz"
+            onclick="document.getElementById('emp-fi-link').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)'"
+            ondragleave="this.style.borderColor='var(--b2)'"
+            ondrop="empHandleDrop(event)">
+            <div style="font-size:20px;margin-bottom:6px">📂</div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:3px">Drop filled Excel/CSV here</div>
+            <div style="font-size:10px;color:var(--t3);font-family:var(--mono)">Supported: .xlsx, .xls, .csv</div>
+          </div>
+          <input type="file" id="emp-fi-link" accept=".xlsx,.xls,.csv" style="display:none" onchange="empHandleUpload(this.files[0])">
+          <div id="emp-up-result-link" style="margin-top:10px"></div>`;
+        if(rc) reviewView.insertBefore(upSec, rc);
+      }
+    }
 
     renderReview();
+
+    // Update txn count in bar
+    setTimeout(()=>{
+      const cnt = document.getElementById('emp-txn-count');
+      if(cnt){
+        const myTxns = TXN.filter(t=>String(t.cardId)===String(window._REVIEW_CARD_ID)&&(!window._REVIEW_MONTH||t.stmtMonth===window._REVIEW_MONTH));
+        cnt.textContent = myTxns.length + ' transactions';
+        cnt.style.color = 'var(--t3)';
+      }
+    }, 300);
   }
 
   // Wait for DB to load then apply
@@ -3664,6 +3727,163 @@ refresh=function(){
      5. Neeche FIREBASE_CONFIG ki values replace karo apni config se
      ════════════════════════════════════════════════════════════════════ -->
 <script>
+
+// ── EMPLOYEE VIEW EXPORT FUNCTIONS ──────────────────────────────────
+function empHandleDrop(e){
+  e.preventDefault();
+  const dz=document.getElementById('emp-dz');
+  if(dz) dz.style.borderColor='var(--b2)';
+  const f=e.dataTransfer.files[0];
+  if(f) empHandleUpload(f);
+}
+
+function empHandleUpload(file){
+  if(!file) return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const r=new FileReader();
+  r.onload=e=>{
+    let data;
+    if(ext==='csv'){
+      data=e.target.result.split('\n').map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));
+    } else {
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    }
+    empProcessUpload(data);
+  };
+  if(ext==='csv') r.readAsText(file); else r.readAsArrayBuffer(file);
+}
+
+function empProcessUpload(data){
+  const resultEl=document.getElementById('emp-up-result-link');
+  if(!data||data.length<2){
+    if(resultEl) resultEl.innerHTML='<div style="padding:8px 12px;border-radius:6px;background:rgba(255,96,136,.08);border:1px solid rgba(255,96,136,.2);color:var(--acc3);font-size:11px;font-family:var(--mono)">File empty or invalid.</div>';
+    return;
+  }
+  const hdrs=data[0].map(h=>String(h).toLowerCase().trim());
+  // Match by TXN_ID
+  const txnIdI=hdrs.findIndex(h=>h==='txn_id'||h==='txnid'||h==='txn id');
+  const idI=txnIdI>=0?txnIdI:hdrs.findIndex(h=>h.includes('id')||h==='sno'||h==='s.no');
+  const marketI=hdrs.findIndex(h=>h.includes('market'));
+  const locationI=hdrs.findIndex(h=>h.includes('location'));
+  const uidsI=hdrs.findIndex(h=>h.includes('uid'));
+  const txnMonthI=hdrs.findIndex(h=>h.includes('transaction month')||h.includes('txn month'));
+  const personI=hdrs.findIndex(h=>h.includes('person')||h.includes('performed'));
+  const invI=hdrs.findIndex(h=>h.includes('invoice'));
+  const coaI=hdrs.findIndex(h=>h.includes('coa')||h.includes('chart'));
+  const cmtI=hdrs.findIndex(h=>h.includes('comment')||h.includes('note'));
+  const deptI=hdrs.findIndex(h=>h.includes('department')||h==='dept');
+  const empI=hdrs.findIndex(h=>h==='employee'||h.includes('employee name'));
+  const ax0I=hdrs.findIndex(h=>h.includes('invoice created')||h.includes('ax: invoice'));
+  const ax1I=hdrs.findIndex(h=>h.includes('payment created')||h.includes('ax: payment'));
+  const ax2I=hdrs.findIndex(h=>h.includes('journal')||h.includes('ax: journal'));
+
+  let updated=0, skipped=0;
+  data.slice(1).forEach(row=>{
+    const txnIdRaw=idI>=0?String(row[idI]||'').trim():null;
+    if(!txnIdRaw) return;
+    // Only update transactions belonging to this employee's card
+    const t=TXN.find(x=>String(x.id)===String(txnIdRaw)&&String(x.cardId)===String(window._REVIEW_CARD_ID));
+    if(!t){skipped++;return;}
+    if(!t.rd) t.rd={};
+    if(marketI>=0&&row[marketI]) t.rd.market=String(row[marketI]);
+    if(locationI>=0&&row[locationI]) t.rd.location=String(row[locationI]);
+    if(uidsI>=0&&row[uidsI]) t.rd.uids=String(row[uidsI]);
+    if(txnMonthI>=0&&row[txnMonthI]) t.txnMonth=String(row[txnMonthI]);
+    if(personI>=0&&row[personI]) t.rd.person=String(row[personI]);
+    if(invI>=0&&row[invI]) t.rd.invoice=String(row[invI]);
+    if(coaI>=0&&row[coaI]) t.rd.coa=String(row[coaI]);
+    if(cmtI>=0&&row[cmtI]) t.rd.comments=String(row[cmtI]);
+    if(deptI>=0&&row[deptI]) t.dept=String(row[deptI]);
+    if(empI>=0&&row[empI]) t.employee=String(row[empI]);
+    if(ax0I>=0) t.rd.ax0=String(row[ax0I]).toLowerCase()==='yes'||row[ax0I]===true;
+    if(ax1I>=0) t.rd.ax1=String(row[ax1I]).toLowerCase()==='yes'||row[ax1I]===true;
+    if(ax2I>=0) t.rd.ax2=String(row[ax2I]).toLowerCase()==='yes'||row[ax2I]===true;
+    if(t.rd.market||t.rd.person||t.rd.invoice||t.rd.coa) t.reviewed=true;
+    updated++;
+  });
+
+  if(typeof refresh==='function') refresh();
+  if(typeof renderReview==='function') renderReview();
+  if(typeof window._fbScheduleSave==='function') window._fbScheduleSave();
+
+  const skipMsg=skipped>0?` (${skipped} rows skipped)`:'';
+  if(resultEl) resultEl.innerHTML=`<div style="padding:8px 12px;border-radius:6px;background:rgba(96,255,176,.07);border:1px solid rgba(96,255,176,.2);color:var(--ok);font-size:11px;font-family:var(--mono)">✓ ${updated} transactions updated!${skipMsg} Data saved to database.</div>`;
+
+  // Auto hide upload section after success
+  setTimeout(()=>{
+    const sec=document.getElementById('emp-upload-section');
+    if(sec) sec.style.display='none';
+  }, 3000);
+}
+
+function empGetTxns(){
+  return TXN.filter(t=>
+    String(t.cardId)===String(window._REVIEW_CARD_ID) &&
+    (!window._REVIEW_MONTH || t.stmtMonth===window._REVIEW_MONTH)
+  );
+}
+
+function empExportCSV(){
+  const txns = empGetTxns();
+  if(!txns.length){ alert('No transactions to export.'); return; }
+  const headers = ['TXN_ID','Date','Merchant/Description','Amount','Statement Month','Transaction Month','Card Type','Parent Card','Child Card','Employee','Department','Market','Location','UIDs','Performed By','Invoice No','COA','Comments','AX: Invoice Created','AX: Payment Created','AX: Journal Posted','Status'];
+  const rows = txns.map((t,i)=>{
+    const rd=t.rd||{};
+    const info=getCardInfo(t.cardId);
+    return [
+      t.id, t.date||'', t.merchant||'', t.amount||0,
+      t.stmtMonth||'', t.txnMonth||t.stmtMonth||'',
+      t.cardType==='personal'?'Personal':'Shared',
+      info.parentNum?'****'+info.parentNum:'',
+      info.childNum?'****'+info.childNum:'',
+      t.employee||'', t.dept||'',
+      rd.market||rd.store||'', rd.location||'', rd.uids||'',
+      rd.person||'', rd.invoice||'', rd.coa||'', rd.comments||'',
+      rd.ax0?'Yes':'No', rd.ax1?'Yes':'No', rd.ax2?'Yes':'No',
+      t.reviewed?'Reviewed':'Pending'
+    ];
+  });
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const card = CARDS.find(c=>c.id===window._REVIEW_CARD_ID);
+  const fname = 'review-'+(card?.employee||card?.name||'card')+'-'+(window._REVIEW_MONTH||'all')+'.csv';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=fname.replace(/\s+/g,'-');
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function empExportExcel(){
+  const txns = empGetTxns();
+  if(!txns.length){ alert('No transactions to export.'); return; }
+  const headers = ['TXN_ID','Date','Merchant/Description','Amount','Statement Month','Transaction Month','Card Type','Parent Card','Child Card','Employee','Department','Market','Location','UIDs','Performed By','Invoice No','COA','Comments','AX: Invoice Created','AX: Payment Created','AX: Journal Posted','Status'];
+  const rows = txns.map((t,i)=>{
+    const rd=t.rd||{};
+    const info=getCardInfo(t.cardId);
+    return [
+      t.id, t.date||'', t.merchant||'', t.amount||0,
+      t.stmtMonth||'', t.txnMonth||t.stmtMonth||'',
+      t.cardType==='personal'?'Personal':'Shared',
+      info.parentNum?'****'+info.parentNum:'',
+      info.childNum?'****'+info.childNum:'',
+      t.employee||'', t.dept||'',
+      rd.market||rd.store||'', rd.location||'', rd.uids||'',
+      rd.person||'', rd.invoice||'', rd.coa||'', rd.comments||'',
+      rd.ax0?'Yes':'No', rd.ax1?'Yes':'No', rd.ax2?'Yes':'No',
+      t.reviewed?'Reviewed':'Pending'
+    ];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!cols'] = [{wch:22},{wch:12},{wch:40},{wch:12},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:18},{wch:14},{wch:16},{wch:16},{wch:14},{wch:16},{wch:14},{wch:22},{wch:20},{wch:18},{wch:18},{wch:16},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  const card = CARDS.find(c=>c.id===window._REVIEW_CARD_ID);
+  const sheetName = (card?.employee||card?.name||'Review').substring(0,28);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const fname = 'review-'+(card?.employee||card?.name||'card')+'-'+(window._REVIEW_MONTH||'all')+'.xlsx';
+  XLSX.writeFile(wb, fname.replace(/\s+/g,'-'));
+}
+
 // ════════════════════════════════════════════════════════════════════
 // SUPABASE DATABASE INTEGRATION
 // ════════════════════════════════════════════════════════════════════
