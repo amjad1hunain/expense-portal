@@ -493,7 +493,7 @@ input[type=file]{display:none}
     </div>
     <div class="fr c4">
       <div class="fg"><label>Description / Merchant</label><input type="text" id="m-desc" placeholder="e.g. Metro Cash &amp; Carry"></div>
-      <div class="fg"><label>Amount</label><input type="number" id="m-amt" placeholder="0.00" step="0.01" min="0"></div>
+      <div class="fg"><label>Amount</label><input type="number" id="m-amt" placeholder="0.00" step="0.01"></div>
       <div class="fg" id="m-emp-wrap"><label>Employee</label><input type="text" id="m-emp" placeholder="Ali Hassan"></div>
       <div class="fg" id="m-dept-wrap" style="display:none"><label>Department</label><input type="text" id="m-dept" placeholder="Operations"></div>
     </div>
@@ -592,7 +592,7 @@ input[type=file]{display:none}
       </div>
       <div class="fg">
         <label>Amount Min</label>
-        <input type="number" id="rf-amt-min" oninput="renderReportTable()" placeholder="0" step="0.01" min="0">
+        <input type="number" id="rf-amt-min" oninput="renderReportTable()" placeholder="0" step="0.01">
       </div>
       <div class="fg">
         <label>Amount Max</label>
@@ -1307,7 +1307,7 @@ function pdfToRows(text){
     const dm=line.match(dateRe);const am=line.match(amtRe);
     if(dm&&am){
       const parts=line.split(/\t+/).map(p=>p.trim()).filter(Boolean);
-      const amount=parseFloat(am[2].replace(/,/g,''))||0;
+      const amount=parseAmount(am[2]);
       if(amount===0) return;
       let desc=parts.filter(p=>!p.match(dateRe)&&!p.match(/^(|Rs\.?)?\s*[\d,]+\.?\d*$/i)&&p.length>1).join(' ').substring(0,80);
       if(!desc) desc=line.replace(dm[0],'').replace(am[0],'').replace(/\t+/g,' ').trim().substring(0,80);
@@ -1352,10 +1352,12 @@ function normMonth(raw){
 
 function parseAmount(raw){
   // Handle accounting negative format: (141.05) or $ (141.05) or (141.05)
+  // Also handles plain negative: -141.05 or -$ 141.05
   const s=String(raw||'').trim();
-  const isNeg=s.includes('(')&&s.includes(')');
+  const isParenNeg=s.includes('(')&&s.includes(')');
+  const isMinusNeg=s.replace(/[^0-9(]/g,'').length>0&&/^[\-\u2212]/.test(s.replace(/[^0-9.\-\u2212]/g,'').trim())||s.trimStart().startsWith('-');
   const num=parseFloat(s.replace(/[^0-9.]/g,''))||0;
-  return isNeg ? -num : num;
+  return (isParenNeg||isMinusNeg) ? -num : num;
 }
 function normDate(d){
   if(d===null||d===undefined||d==='') return '';
@@ -1384,7 +1386,22 @@ function parseExcel(file){
 
 function parseCSVfile(file){
   const r=new FileReader();
-  r.onload=e=>{const lines=e.target.result.split('\n').map(l=>l.split(',').map(c=>c.replace(/^"|"$/g,'').trim()));processSheet(lines,file.name);};
+  r.onload=e=>{
+    // Proper CSV parser: handles quoted fields (e.g. "1,034.80") correctly
+    function parseCSVLine(line){
+      const result=[];let cur='';let inQ=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i];
+        if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+        else if(ch===','&&!inQ){result.push(cur.trim());cur='';}
+        else cur+=ch;
+      }
+      result.push(cur.trim());
+      return result;
+    }
+    const lines=e.target.result.split('\n').map(l=>parseCSVLine(l));
+    processSheet(lines,file.name);
+  };
   r.readAsText(file);
 }
 
@@ -2327,8 +2344,10 @@ function getFilteredTXN(){
   const rfDesc=(document.getElementById('rf-desc')?.value||'').toLowerCase();
   const rfWho=(document.getElementById('rf-who')?.value||'').toLowerCase();
   const rfCOA=(document.getElementById('rf-coa')?.value||'').toLowerCase();
-  const rfAMin=parseFloat(document.getElementById('rf-amt-min')?.value||'0')||0;
-  const rfAMax=parseFloat(document.getElementById('rf-amt-max')?.value||'')||Infinity;
+  const rfAMinRaw=document.getElementById('rf-amt-min')?.value||'';
+  const rfAMaxRaw=document.getElementById('rf-amt-max')?.value||'';
+  const rfAMin=rfAMinRaw!==''?parseFloat(rfAMinRaw):-Infinity;
+  const rfAMax=rfAMaxRaw!==''?parseFloat(rfAMaxRaw):Infinity;
   const rfDFrom=document.getElementById('rf-date-from')?.value||'';
   const rfDTo=document.getElementById('rf-date-to')?.value||'';
   return TXN.filter(t=>{
@@ -2754,8 +2773,8 @@ function addCOA(){
 }
 
 function saveCurrency(){
-  CUR.symbol='$';
-  CUR.name='USD';
+  CUR.symbol=document.getElementById('cur-symbol')?.value||'$';
+  CUR.name=document.getElementById('cur-name')?.value||'USD';
   CUR.decimals=parseInt(document.getElementById('cur-decimals').value)||0;
   updateCurrencyPreview();
   const el=document.getElementById('cur-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000);
@@ -2785,7 +2804,8 @@ function onMCardChange(){
   const cid2=parseInt(document.getElementById('m-card-sel')?.value)||null;
   const card=CARDS.find(c=>c.id===cid2);
   if(card){
-    document.getElementById('m-type').value=card.type;
+    const typeEl=document.getElementById('m-type');
+    if(typeEl) typeEl.value=card.type;
     document.getElementById('m-emp').value=card.employee||'';
     document.getElementById('m-dept').value=card.dept||'';
     toggleManual();
@@ -3992,7 +4012,7 @@ function empExportExcel(){
           if(data.COA && Array.isArray(data.COA)) window.COA=data.COA;
           if(data.AX && Array.isArray(data.AX)) window.AX=data.AX;
           if(data.DUE_DATES) window.DUE_DATES=data.DUE_DATES;
-          if(data.CUR){window.CUR=data.CUR;window.CUR.symbol='$';window.CUR.name='USD';}
+          if(data.CUR){window.CUR=data.CUR;if(!window.CUR.symbol)window.CUR.symbol='$';if(!window.CUR.name)window.CUR.name='USD';}
           if(data.selectedFields && Array.isArray(data.selectedFields)) window.selectedFields=data.selectedFields;
           if(data.PDFkw) window.PDFkw=data.PDFkw;
           dbStatus('Loaded ✓ — ' + (window.CARDS||[]).length + ' cards, ' + (window.TXN||[]).length + ' txns', 'ok');
